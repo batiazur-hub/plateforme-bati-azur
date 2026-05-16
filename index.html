@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plateforme centrale Bâti Azur pour accéder aux outils internes : mails, étiquettes et actualités." />
+
+  <title>Bâti Azur Hub</title>
+
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./site.webmanifest" />
+
+  <meta name="theme-color" content="#0F4FA3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Bâti Azur Hub" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="background-orb orb-one"></div>
+  <div class="background-orb orb-two"></div>
+  <div class="background-orb orb-three"></div>
+
+  <main class="shell">
+    <header class="hero">
+      <div class="topbar">
+        <div class="brand">
+          <img src="./apple-touch-icon.png" alt="Icône Bâti Azur Hub" class="brand-icon" />
+          <div>
+            <span class="eyebrow">Plateforme interne</span>
+            <strong>Bâti Azur Hub</strong>
+          </div>
+        </div>
+        <span class="status-pill">Outils Bâti Azur</span>
+      </div>
+
+      <section class="hero-card">
+        <div class="hero-copy">
+          <span class="badge">💧 Accès rapide aux plateformes</span>
+          <h1>Tout Bâti Azur au même endroit.</h1>
+          <p>
+            Retrouvez les outils internes pour créer les mails clients, préparer les étiquettes magasin
+            et gérer les actualités de l’application d’analyse.
+          </p>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <img src="./android-chrome-512x512.png" alt="" />
+        </div>
+      </section>
+    </header>
+
+    <section class="tools-grid" aria-label="Outils disponibles">
+      <a class="tool-card primary" href="https://batiazur-hub.github.io/mail-generator-bati-azur/" target="_blank" rel="noopener">
+        <div class="card-top">
+          <div class="tool-icon">✉️</div>
+          <span class="tool-tag">Mails</span>
+        </div>
+        <h2>Générateur de mails</h2>
+        <p>Créer des emails clients professionnels avec blocs, boutons, images et modèles Bâti Azur.</p>
+        <span class="open-link">Ouvrir la plateforme →</span>
+      </a>
+
+      <a class="tool-card yellow" href="https://batiazur-hub.github.io/generateur-etiquettes-bati-azur/" target="_blank" rel="noopener">
+        <div class="card-top">
+          <div class="tool-icon">🏷️</div>
+          <span class="tool-tag">Étiquettes</span>
+        </div>
+        <h2>Générateur d’étiquettes</h2>
+        <p>Préparer les étiquettes produits, prix TTC/HT et impressions A4 pour le magasin.</p>
+        <span class="open-link">Ouvrir la plateforme →</span>
+      </a>
+
+      <a class="tool-card primary" href="https://batiazur-hub.github.io/batiazur-analyse/admin-actus.html" target="_blank" rel="noopener">
+        <div class="card-top">
+          <div class="tool-icon">📰</div>
+          <span class="tool-tag">Actualités</span>
+        </div>
+        <h2>Admin actualités</h2>
+        <p>Gérer les annonces, promotions et informations importantes affichées dans l’application.</p>
+        <span class="open-link">Ouvrir la plateforme →</span>
+      </a>
+    </section>
+
+    <section class="quick-note">
+      <div>
+        <h3>Installation sur iPhone</h3>
+        <p>Ouvrez cette page dans Safari, puis touchez Partager → Sur l’écran d’accueil pour l’utiliser comme une application.</p>
+      </div>
+      <button type="button" id="copyUrlButton">Copier l’adresse du Hub</button>
+    </section>
+
+    <footer>
+      <span>Bâti Azur © Hub interne</span>
+      <span>Version 1.0</span>
+    </footer>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
