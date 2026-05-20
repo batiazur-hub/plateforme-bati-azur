@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Plateforme centrale Bâti Azur pour accéder aux outils internes : mails, étiquettes et actualités." />
+  <meta name="description" content="Plateforme centrale Bâti Azur pour accéder aux outils internes : mails, étiquettes, actualités et analyse." />
 
   <title>Bâti Azur Hub</title>
 
@@ -13,94 +13,129 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
   <link rel="manifest" href="./site.webmanifest" />
 
-  <meta name="theme-color" content="#0F4FA3" />
+  <meta name="theme-color" content="#007AFF" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Bâti Azur Hub" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="background-orb orb-one"></div>
-  <div class="background-orb orb-two"></div>
-  <div class="background-orb orb-three"></div>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
 
   <main class="shell">
-    <header class="hero">
-      <div class="topbar">
-        <div class="brand">
-          <img src="./apple-touch-icon.png" alt="Icône Bâti Azur Hub" class="brand-icon" />
-          <div>
-            <span class="eyebrow">Plateforme interne</span>
-            <strong>Bâti Azur Hub</strong>
-          </div>
-        </div>
-        <span class="status-pill">Outils Bâti Azur</span>
-      </div>
 
-      <section class="hero-card">
-        <div class="hero-copy">
-          <span class="badge">💧 Accès rapide aux plateformes</span>
-          <h1>Tout Bâti Azur au même endroit.</h1>
-          <p>
-            Retrouvez les outils internes pour créer les mails clients, préparer les étiquettes magasin
-            et gérer les actualités de l’application d’analyse.
-          </p>
+    <header class="topbar">
+      <div class="brand">
+        <img src="./apple-touch-icon.png" alt="Bâti Azur Hub" class="brand-icon" />
+        <div>
+          <div class="brand-name">Bâti Azur Hub</div>
+          <div class="brand-sub">Plateforme interne</div>
         </div>
-        <div class="hero-visual" aria-hidden="true">
-          <img src="./android-chrome-512x512.png" alt="" />
-        </div>
-      </section>
+      </div>
+      <span class="version-badge">Version 1.1</span>
     </header>
 
-    <section class="tools-grid" aria-label="Outils disponibles">
-      <a class="tool-card primary" href="https://batiazur-hub.github.io/mail-generator-bati-azur/" target="_blank" rel="noopener">
-        <div class="card-top">
-          <div class="tool-icon">✉️</div>
-          <span class="tool-tag">Mails</span>
-        </div>
-        <h2>Générateur de mails</h2>
-        <p>Créer des emails clients professionnels avec blocs, boutons, images et modèles Bâti Azur.</p>
-        <span class="open-link">Ouvrir la plateforme →</span>
-      </a>
-
-      <a class="tool-card yellow" href="https://batiazur-hub.github.io/generateur-etiquettes-bati-azur/" target="_blank" rel="noopener">
-        <div class="card-top">
-          <div class="tool-icon">🏷️</div>
-          <span class="tool-tag">Étiquettes</span>
-        </div>
-        <h2>Générateur d’étiquettes</h2>
-        <p>Préparer les étiquettes produits, prix TTC/HT et impressions A4 pour le magasin.</p>
-        <span class="open-link">Ouvrir la plateforme →</span>
-      </a>
-
-      <a class="tool-card primary" href="https://batiazur-hub.github.io/batiazur-analyse/admin-actus.html" target="_blank" rel="noopener">
-        <div class="card-top">
-          <div class="tool-icon">📰</div>
-          <span class="tool-tag">Actualités</span>
-        </div>
-        <h2>Admin actualités</h2>
-        <p>Gérer les annonces, promotions et informations importantes affichées dans l’application.</p>
-        <span class="open-link">Ouvrir la plateforme →</span>
-      </a>
+    <section class="hero">
+      <div class="hero-eyebrow">Accès rapide aux plateformes</div>
+      <h1>Tout Bâti Azur<br><span>au même endroit.</span></h1>
+      <p>Retrouvez les outils internes pour créer les mails clients, préparer les étiquettes magasin, gérer les actualités et analyser l'eau de vos piscines.</p>
     </section>
 
+    <div class="tools-grid" aria-label="Outils disponibles">
+
+      <!-- Générateur de mails -->
+      <a class="tool-card" href="https://batiazur-hub.github.io/mail-generator-bati-azur/" target="_blank" rel="noopener">
+        <div class="card-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="3"/>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+          </svg>
+        </div>
+        <span class="card-tag blue">Mails</span>
+        <h2>Générateur de mails</h2>
+        <p>Créer des emails clients professionnels avec blocs, boutons, images et modèles Bâti Azur.</p>
+        <span class="card-cta blue">
+          Ouvrir la plateforme
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </a>
+
+      <!-- Générateur d'étiquettes -->
+      <a class="tool-card" href="https://batiazur-hub.github.io/generateur-etiquettes-bati-azur/" target="_blank" rel="noopener">
+        <div class="card-icon orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.41 0l8.01-8a1 1 0 0 0 0-1.42z"/>
+            <circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <span class="card-tag orange">Étiquettes</span>
+        <h2>Générateur d'étiquettes</h2>
+        <p>Préparer les étiquettes produits, prix TTC/HT et impressions A4 pour le magasin.</p>
+        <span class="card-cta orange">
+          Ouvrir la plateforme
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </a>
+
+      <!-- Admin actualités -->
+      <a class="tool-card" href="https://batiazur-hub.github.io/batiazur-analyse/admin-actus.html" target="_blank" rel="noopener">
+        <div class="card-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
+            <path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/>
+          </svg>
+        </div>
+        <span class="card-tag green">Actualités</span>
+        <h2>Admin actualités</h2>
+        <p>Gérer les annonces, promotions et informations importantes affichées dans l'application.</p>
+        <span class="card-cta green">
+          Ouvrir la plateforme
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </a>
+
+      <!-- Analyse piscine -->
+      <a class="tool-card" href="https://batiazur-hub.github.io/batiazur-analyse/" target="_blank" rel="noopener">
+        <div class="card-icon teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2c0 0-6 7.5-6 12a6 6 0 0 0 12 0c0-4.5-6-12-6-12z"/>
+            <path d="M9 17a3 3 0 0 0 6 0"/>
+          </svg>
+        </div>
+        <span class="card-tag teal">Analyse</span>
+        <h2>Analyse piscine</h2>
+        <p>Diagnostiquer et doser le traitement de l'eau en quelques secondes — disponible sur iPhone.</p>
+        <span class="card-cta teal">
+          Ouvrir l'application
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </a>
+
+    </div>
+
     <section class="quick-note">
-      <div>
-        <h3>Installation sur iPhone</h3>
-        <p>Ouvrez cette page dans Safari, puis touchez Partager → Sur l’écran d’accueil pour l’utiliser comme une application.</p>
+      <div class="note-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2"/>
+          <path d="M12 18h.01"/>
+          <path d="M9 7h6M9 11h6M9 15h4"/>
+        </svg>
       </div>
-      <button type="button" id="copyUrlButton">Copier l’adresse du Hub</button>
+      <div class="note-body">
+        <h3>Installation sur iPhone</h3>
+        <p>Ouvrez cette page dans Safari, puis touchez Partager &rarr; Sur l'écran d'accueil pour l'utiliser comme une application.</p>
+      </div>
+      <button type="button" class="copy-btn" id="copyUrlButton">Copier l'adresse</button>
     </section>
 
     <footer>
-      <span>Bâti Azur © Hub interne</span>
-      <span>Version 1.0</span>
+      <span>Bâti Azur &copy; Hub interne</span>
+      <span>Version 1.1</span>
     </footer>
+
   </main>
 
   <script src="./app.js"></script>
