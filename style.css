@@ -21,6 +21,7 @@
   --yellow: #FF9F0A;
   --green: #34C759;
   --teal: #5AC8FA;
+  --indigo: #5E5CE6;
   --bg-start: #e8f4fd;
   --bg-mid: #f0f8ff;
   --bg-end: #faf9ff;
@@ -256,6 +257,7 @@ body {
 .card-icon.orange { background: rgba(255, 159, 10, 0.12); color: var(--yellow); }
 .card-icon.green  { background: rgba(52, 199, 89, 0.12); color: var(--green); }
 .card-icon.teal   { background: rgba(90, 200, 250, 0.14); color: var(--teal); }
+.card-icon.indigo { background: rgba(94, 92, 230, 0.12); color: var(--indigo); }
 
 .card-tag {
   display: inline-flex;
@@ -274,6 +276,7 @@ body {
 .card-tag.orange { background: rgba(255, 159, 10, 0.10); color: var(--yellow); }
 .card-tag.green  { background: rgba(52, 199, 89, 0.10); color: var(--green); }
 .card-tag.teal   { background: rgba(90, 200, 250, 0.12); color: var(--teal); }
+.card-tag.indigo { background: rgba(94, 92, 230, 0.10); color: var(--indigo); }
 
 .tool-card h2 {
   margin: 0 0 8px;
@@ -309,6 +312,7 @@ body {
 .card-cta.orange { color: var(--yellow); }
 .card-cta.green  { color: var(--green); }
 .card-cta.teal   { color: var(--teal); }
+.card-cta.indigo { color: var(--indigo); }
 
 /* ── Quick note ── */
 .quick-note {
@@ -427,6 +431,7 @@ footer {
     --yellow: #FF9F0A;
     --green: #30D158;
     --teal: #64D2FF;
+    --indigo: #7D7AFF;
     --bg-start: #050810;
     --bg-mid: #080d18;
     --bg-end: #050810;
@@ -444,11 +449,13 @@ footer {
   .card-icon.orange { background: rgba(255, 159, 10, 0.16); color: var(--yellow); }
   .card-icon.green  { background: rgba(48, 209, 88, 0.16); color: var(--green); }
   .card-icon.teal   { background: rgba(100, 210, 255, 0.14); color: var(--teal); }
+  .card-icon.indigo { background: rgba(125, 122, 255, 0.16); color: var(--indigo); }
 
   .card-tag.blue   { background: rgba(10, 132, 255, 0.16); color: var(--ios-blue); }
   .card-tag.orange { background: rgba(255, 159, 10, 0.16); color: var(--yellow); }
   .card-tag.green  { background: rgba(48, 209, 88, 0.16); color: var(--green); }
   .card-tag.teal   { background: rgba(100, 210, 255, 0.14); color: var(--teal); }
+  .card-tag.indigo { background: rgba(125, 122, 255, 0.16); color: var(--indigo); }
 
   .hero-eyebrow { background: rgba(10, 132, 255, 0.16); border-color: rgba(10, 132, 255, 0.20); }
 
