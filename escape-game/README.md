@@ -36,11 +36,15 @@ dans l'ordre des épreuves, forment le code d'un cadenas.
 
 ## Contenu graphique
 
-Aucun visuel, logo ou blason sous droit d'auteur n'est utilisé. Blasons, plan
-de la salle, constellation, filigrane de château et texture sont générés par
-du code, dans ce dépôt.
+Aucun visuel, logo ou blason sous droit d'auteur n'est utilisé.
 
-- **Icônes** : *Icons by game-icons.net* (Lorc), licence CC BY 3.0.
+Les quatre écus portent des **meubles héraldiques ordinaires** — lion,
+blaireau, aigle, serpent — qui relèvent du vocabulaire héraldique commun et
+non d'une œuvre protégée. La forme de l'écu, le cadre ornemental (volutes et
+filets), le plan de la salle, la constellation, le filigrane de château et la
+texture de parchemin sont **générés par le code de ce dépôt**.
+
+- **Icônes** : *Icons by game-icons.net* (Lorc, Delapouite), licence CC BY 3.0.
 - **Polices** : Cinzel, Cinzel Decorative, EB Garamond, MedievalSharp —
   licence SIL Open Font License 1.1, via le dépôt Google Fonts.
 

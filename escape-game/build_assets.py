@@ -43,11 +43,41 @@ FONT_SPARSE_DIRS = ["ofl/cinzel", "ofl/cinzeldecorative", "ofl/medievalsharp", "
 FONT_RAW_BASE = "https://github.com/google/fonts/raw/refs/heads/main/"
 ICON_RAW_BASE = "https://raw.githubusercontent.com/game-icons/icons/master/lorc/{}.svg"
 
-ICON_NAMES = [
-    "owl", "cauldron", "quill-ink", "round-bottom-flask", "key", "padlock",
-    "crystal-ball", "wizard-staff", "castle", "star-swirl", "magic-swirl",
-    "book-cover", "scroll-unfurled", "fairy-wand", "gothic-cross", "top-hat",
-]
+# Icones game-icons.net (CC BY 3.0). Les auteurs sont ranges par dossier dans
+# le depot : on garde le chemin complet pour pouvoir puiser chez plusieurs.
+ICON_PATHS = {
+    # bestiaire heraldique des quatre maisons
+    "lion": "lorc/lion.svg",
+    "blaireau": "delapouite/raccoon-head.svg",
+    "aigle": "delapouite/eagle-head.svg",
+    "serpent": "lorc/snake.svg",
+    # ambiance
+    "owl": "lorc/owl.svg",
+    "cauldron": "lorc/cauldron.svg",
+    "quill-ink": "lorc/quill-ink.svg",
+    "round-bottom-flask": "lorc/round-bottom-flask.svg",
+    "key": "lorc/key.svg",
+    "padlock": "lorc/padlock.svg",
+    "crystal-ball": "lorc/crystal-ball.svg",
+    "wizard-staff": "lorc/wizard-staff.svg",
+    "castle": "lorc/castle.svg",
+    "star-swirl": "lorc/star-swirl.svg",
+    "magic-swirl": "lorc/magic-swirl.svg",
+    "book-cover": "lorc/book-cover.svg",
+    "scroll-unfurled": "lorc/scroll-unfurled.svg",
+    "fairy-wand": "lorc/fairy-wand.svg",
+    "top-hat": "lorc/top-hat.svg",
+    "moon": "lorc/moon.svg",
+    # etiquettes d'ingredients
+    "racine": "delapouite/plant-roots.svg",
+    "ecaille": "lorc/dorsal-scales.svg",
+    "plume": "lorc/feather.svg",
+    "candle": "lorc/candle-flame.svg",
+    "spell-book": "delapouite/secret-book.svg",
+    "tied-scroll": "lorc/tied-scroll.svg",
+}
+ICON_SPARSE_DIRS = ["lorc", "delapouite"]
+ICON_RAW_BASE = "https://raw.githubusercontent.com/game-icons/icons/master/{}"
 
 
 def sparse_clone(url: str, dest: Path, dirs: list) -> Path:
@@ -105,21 +135,21 @@ def clean_icon(svg: str) -> str:
 
 def download_icons() -> None:
     ICONS.mkdir(parents=True, exist_ok=True)
-    todo = [n for n in ICON_NAMES if not (ICONS / f"{n}.svg").exists()]
-    for name in ICON_NAMES:
+    todo = {n: rel for n, rel in ICON_PATHS.items() if not (ICONS / f"{n}.svg").exists()}
+    for name in ICON_PATHS:
         if name not in todo:
             print(f"  = {name}.svg (deja present)")
     if not todo:
         return
     src = None
     try:
-        src = sparse_clone(ICONS_REPO, CACHE / "game-icons", ["lorc"])
+        src = sparse_clone(ICONS_REPO, CACHE / "game-icons", ICON_SPARSE_DIRS)
     except (OSError, subprocess.CalledProcessError) as exc:
         print(f"  ! clone git indisponible ({exc}), repli HTTP")
-    for name in todo:
-        local = (src / "lorc" / f"{name}.svg") if src is not None else None
+    for name, rel in todo.items():
+        local = (src / rel) if src is not None else None
         raw = local.read_text(encoding="utf-8") if local and local.exists() \
-            else fetch(ICON_RAW_BASE.format(name)).decode("utf-8")
+            else fetch(ICON_RAW_BASE.format(rel)).decode("utf-8")
         (ICONS / f"{name}.svg").write_text(clean_icon(raw), encoding="utf-8")
         print(f"  + {name}.svg")
 
@@ -134,49 +164,36 @@ def noise_layer(w: int, h: int, scale: int, blur: float, rng) -> np.ndarray:
 
 
 def build_parchment(width: int = 1500, height: int = 2121, seed: int = 20240) -> None:
+    """Parchemin discret : le fond doit rester lisible sous du texte fin.
+
+    On vise un papier legerement irregulier, pas un vieux grimoire tache : le
+    contraste du mottling est volontairement faible et le vignettage doux.
+    """
     TEXTURES.mkdir(parents=True, exist_ok=True)
-    dest = TEXTURES / "parchment.jpg"
     rng = np.random.default_rng(seed)
 
-    base = np.array([240.0, 227.0, 196.0])  # ~#f0e3c4
+    base = np.array([243.0, 232.0, 206.0])
     canvas = np.repeat(np.repeat(base[None, None, :], height, 0), width, 1)
 
-    # Mottling : plusieurs echelles de bruit melangees.
+    # Mottling large, tres attenue.
     mottle = (
-        1.00 * noise_layer(width, height, 90, 12, rng)
-        + 0.60 * noise_layer(width, height, 30, 5, rng)
-        + 0.30 * noise_layer(width, height, 10, 2, rng)
-    )
-    mottle /= 1.9
-    canvas += mottle[:, :, None] * np.array([9.0, 10.0, 12.0])
+        1.00 * noise_layer(width, height, 140, 18, rng)
+        + 0.45 * noise_layer(width, height, 45, 7, rng)
+    ) / 1.45
+    canvas += mottle[:, :, None] * np.array([4.5, 5.0, 6.0])
 
-    # Grain fin.
-    grain = rng.normal(0.0, 2.2, (height, width, 1))
-    canvas += grain
+    # Fibres du papier : grain fin, presque imperceptible.
+    canvas += rng.normal(0.0, 1.4, (height, width, 1))
 
-    # Quelques taches brunes semi-transparentes et floutees.
-    stain = np.zeros((height, width), dtype=np.float32)
+    # Vignettage chaud et doux sur les bords.
     yy, xx = np.mgrid[0:height, 0:width]
-    for _ in range(14):
-        cx, cy = rng.integers(0, width), rng.integers(0, height)
-        r = rng.integers(70, 260)
-        d = ((xx - cx) ** 2 + (yy - cy) ** 2) / float(r * r)
-        stain += np.clip(1.0 - d, 0.0, 1.0) * float(rng.uniform(0.10, 0.32))
-    stain = np.asarray(
-        Image.fromarray((np.clip(stain, 0, 1) * 255).astype(np.uint8)).filter(
-            ImageFilter.GaussianBlur(28)
-        ),
-        dtype=np.float32,
-    ) / 255.0
-    canvas -= stain[:, :, None] * np.array([26.0, 32.0, 40.0])
-
-    # Vignettage brun sur les bords.
     nx = (xx / (width - 1) - 0.5) * 2.0
     ny = (yy / (height - 1) - 0.5) * 2.0
-    vign = np.clip((nx ** 2 + ny ** 2) / 1.45 - 0.18, 0.0, 1.0) ** 1.4
-    canvas -= vign[:, :, None] * np.array([34.0, 42.0, 54.0])
+    vign = np.clip((nx ** 2 + ny ** 2) / 2.6 - 0.30, 0.0, 1.0) ** 1.6
+    canvas -= vign[:, :, None] * np.array([16.0, 21.0, 30.0])
 
-    Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8)).save(dest, "JPEG", quality=90)
+    Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8)).save(
+        TEXTURES / "parchment.jpg", "JPEG", quality=92)
     print(f"  + textures/parchment.jpg ({width}x{height})")
 
 

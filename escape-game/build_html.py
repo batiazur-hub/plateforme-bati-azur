@@ -5,9 +5,13 @@ Une fonction par carte, toutes construites sur les memes primitives
 (`page`, `card`, `icon`, `svg_*`) pour garder un rendu coherent.
 """
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+
+# Palette, dupliquee en Python car les SVG en ligne ne voient pas le CSS.
+ENCRE, BX, OR, PARCHEMIN = "#2a1a0d", "#6b1420", "#a6812c", "#efe3c4"
 ASSETS = ROOT / "assets"
 
 # --------------------------------------------------------------------------
@@ -15,11 +19,11 @@ ASSETS = ROOT / "assets"
 # --------------------------------------------------------------------------
 
 MAISONS = [
-    # (maison, prénom du fondateur, nom du fondateur, accent)
-    ("Gryffondor", "Godric", "Gryffondor", "bordeaux"),
-    ("Poufsouffle", "Helga", "Poufsouffle", "or"),
-    ("Serdaigle", "Rowena", "Serdaigle", "nuit"),
-    ("Serpentard", "Salazar", "Serpentard", "vert"),
+    # (maison, prénom du fondateur, nom du fondateur, accent, meuble heraldique)
+    ("Gryffondor", "Godric", "Gryffondor", "bordeaux", "lion"),
+    ("Poufsouffle", "Helga", "Poufsouffle", "or", "blaireau"),
+    ("Serdaigle", "Rowena", "Serdaigle", "nuit", "aigle"),
+    ("Serpentard", "Salazar", "Serpentard", "vert", "serpent"),
 ]
 
 INGREDIENTS = ["Poudre de Lune", "Racine de Mandragore", "Écaille de Dragon", "Plume de Phénix"]
@@ -44,7 +48,7 @@ SOLUTIONS = [
 CODE_FINAL = "".join(str(s[2]) for s in SOLUTIONS)
 
 # Constellation : 8 étoiles + le trace qui les relie (coordonnees en % du cadre).
-ETOILES = [(14, 62), (27, 34), (42, 52), (50, 20), (63, 44), (72, 74), (84, 30), (90, 61)]
+ETOILES = [(12, 52), (26, 26), (41, 43), (50, 14), (63, 36), (72, 62), (85, 23), (91, 51)]
 TRACE = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (4, 6), (6, 7)]
 
 
@@ -52,59 +56,142 @@ TRACE = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (4, 6), (6, 7)]
 # Primitives de mise en page
 # --------------------------------------------------------------------------
 
+def _icon_svg(name: str) -> str:
+    path = ASSETS / "icons" / f"{name}.svg"
+    return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
 def icon(name: str, color: str = "currentColor", size: str = "1em") -> str:
     """Insere une icone game-icons.net en ligne.
 
     WeasyPrint n'applique pas le CSS du document aux SVG en ligne : la couleur
     et la taille doivent donc être posées en attributs sur le <svg>.
     """
-    path = ASSETS / "icons" / f"{name}.svg"
-    if not path.exists():
+    svg = _icon_svg(name)
+    if not svg:
         return ""
-    svg = path.read_text(encoding="utf-8")
     svg = svg.replace('fill="currentColor"', f'fill="{color}"')
     svg = svg.replace("<svg ", f'<svg width="{size}" height="{size}" ', 1)
     return f'<span class="icon">{svg}</span>'
 
 
-def card(title, subtitle, body, *, kicker="", footer="", accent="bordeaux", head_icon=""):
-    """Cadre commun a toutes les cartes : double bordure, points dores aux coins."""
-    head = (f'<div class="card-icon">{icon(head_icon, ACCENT_HEX[accent], "17mm")}</div>'
+def icon_inner(name: str, color: str) -> str:
+    """Contenu d'une icone sans sa balise <svg>, pour l'imbriquer ailleurs.
+
+    Les icones game-icons ont toutes un viewBox 0 0 512 512 : l'appelant peut
+    donc les placer avec un simple translate/scale.
+    """
+    svg = _icon_svg(name)
+    if not svg:
+        return ""
+    inner = re.sub(r"^<svg[^>]*>|</svg>$", "", svg.strip())
+    return inner.replace('fill="currentColor"', f'fill="{color}"')
+
+
+def svg_corner(flip_x: bool = False, flip_y: bool = False) -> str:
+    """Coin ornemental : double filet, volute fuselee et losange.
+
+    La volute est tracee en trois segments de largeur decroissante, ce qui
+    imite le fuselage d'un trait a la plume. La symetrie des quatre coins est
+    obtenue en inversant les axes dans le SVG lui-meme (WeasyPrint applique mal
+    un transform CSS sur un bloc absolu).
+    """
+    sx, tx = (-1, 124) if flip_x else (1, 0)
+    sy, ty = (-1, 124) if flip_y else (1, 0)
+    segs = [
+        ("M35 13 C 53 13 62 27 62 42", 1.50),
+        ("M62 42 C 62 53 55 60 45 60 C 37 60 32 55 32 47", 1.17),
+        ("M32 47 C 32 41 36 36 42 36 C 46 36 49 39 50 42", 0.83),
+    ]
+    scroll = "".join(
+        f'<path d="{d}" fill="none" stroke="{OR}" stroke-width="{w:.2f}"'
+        f' stroke-linecap="round"/>' for d, w in segs
+    )
+    return f"""<svg viewBox="0 0 124 124" width="34mm" height="34mm">
+  <g transform="translate({tx},{ty}) scale({sx},{sy})">
+    <path d="M6 124 V32 Q6 6 32 6 H124" fill="none" stroke="{OR}" stroke-width="1.6"/>
+    <path d="M13 124 V35 Q13 13 35 13 H124" fill="none" stroke="{BX}" stroke-width="0.8"/>
+    {scroll}
+    <path d="M20 20 l6 -6 6 6 -6 6 Z" fill="{OR}"/>
+    <circle cx="50" cy="46" r="1.9" fill="{BX}"/>
+  </g>
+</svg>"""
+
+
+def svg_fleuron(color: str = OR, width: str = "40mm") -> str:
+    """Filet de separation termine par un fleuron a trois lobes."""
+    return f"""<svg viewBox="0 0 200 24" width="{width}" class="fleuron">
+  <line x1="4" y1="12" x2="78" y2="12" stroke="{color}" stroke-width="1"/>
+  <line x1="122" y1="12" x2="196" y2="12" stroke="{color}" stroke-width="1"/>
+  <path d="M100 3 C 108 9 112 12 118 12 C 112 12 108 15 100 21
+           C 92 15 88 12 82 12 C 88 12 92 9 100 3 Z" fill="{color}"/>
+  <circle cx="100" cy="12" r="2.6" fill="{color}"/>
+  <circle cx="72" cy="12" r="1.5" fill="{color}"/>
+  <circle cx="128" cy="12" r="1.5" fill="{color}"/>
+</svg>"""
+
+
+def svg_shield(beast, accent_hex, *, width=132):
+    """Blason : ecu heraldique portant une bete du bestiaire libre.
+
+    Le lion, le blaireau, l'aigle et le serpent sont des meubles heraldiques
+    ordinaires : rien d'emprunte a une oeuvre protegee.
+    """
+    return f"""<svg viewBox="0 0 120 150" width="{width}" style="max-width:100%">
+  <path d="M60 6 L110 23 V76 C110 108 88 130 60 142 C32 130 10 108 10 76 V23 Z"
+        fill="{accent_hex}"/>
+  <path d="M60 6 L110 23 V76 C110 108 88 130 60 142 C32 130 10 108 10 76 V23 Z"
+        fill="none" stroke="{OR}" stroke-width="3.2"/>
+  <path d="M60 15 L103 29 V76 C103 103 84 122 60 133 C36 122 17 103 17 76 V29 Z"
+        fill="none" stroke="#f2e6c8" stroke-width="1" opacity="0.45"/>
+  <g transform="translate(27,40) scale(0.129)">{icon_inner(beast, "#f4e9cd")}</g>
+</svg>"""
+
+
+# Le coin ornemental fait 34 mm pour un viewBox de 124 unites : un trait pose
+# a `u` unites du bord tombe donc a u * 34/124 mm. On s'en sert pour aligner au
+# millimetre les filets de raccord sur ceux des coins.
+_U = 34.0 / 124.0
+_GOLD_W, _BX_W = 1.6 * _U, 0.8 * _U          # epaisseurs des deux filets
+_GOLD_C, _BX_C = 6 * _U, 13 * _U             # position de leur axe
+
+FRAME_RULES = "".join(
+    f'<div class="fr {orient} {side} {tone}" style="{side}:{off:.3f}mm"></div>'
+    for orient, sides in (("h", ("top", "bottom")), ("v", ("left", "right")))
+    for side in sides
+    for tone, off in (("gold", _GOLD_C - _GOLD_W / 2), ("bx", _BX_C - _BX_W / 2))
+)
+
+
+def card(title, subtitle, body, *, kicker="", footer="", accent="bordeaux",
+         head_icon="", extra=""):
+    """Cadre commun a toutes les cartes : coins ornementes relies par des filets."""
+    head = (f'<div class="card-icon">{icon(head_icon, ACCENT_HEX[accent], "16mm")}</div>'
             if head_icon else "")
     kick = f'<div class="kicker">{kicker}</div>' if kicker else ""
     sub = f'<div class="subtitle">{subtitle}</div>' if subtitle else ""
     foot = f'<div class="footer">{footer}</div>' if footer else ""
+    corners = (
+        f'<div class="corner tl">{svg_corner()}</div>'
+        f'<div class="corner tr">{svg_corner(flip_x=True)}</div>'
+        f'<div class="corner bl">{svg_corner(flip_y=True)}</div>'
+        f'<div class="corner br">{svg_corner(flip_x=True, flip_y=True)}</div>'
+        + FRAME_RULES
+    )
     return f"""<section class="page">
-  <div class="card accent-{accent}">
-    <span class="dot tl"></span><span class="dot tr"></span>
-    <span class="dot bl"></span><span class="dot br"></span>
+  <div class="card accent-{accent} {extra}">
+    {corners}
     <header class="card-head">
       {head}
       {kick}
       <h1>{title}</h1>
       {sub}
-      <div class="rule"></div>
+      <div class="rule">{svg_fleuron(ACCENT_HEX[accent])}</div>
     </header>
     <div class="card-body">{body}</div>
     {foot}
   </div>
 </section>"""
-
-
-def svg_shield(initial, accent_hex, *, width=150):
-    """Blason dessine geometriquement (aucun visuel copie).
-
-    Tout le style est pose en attributs : WeasyPrint ignore le CSS du document
-    a l'interieur d'un SVG en ligne.
-    """
-    return f"""<svg viewBox="0 0 120 152" width="{width}" style="max-width:100%">
-  <path d="M60 4 L112 22 V78 C112 112 88 134 60 146 C32 134 8 112 8 78 V22 Z"
-        fill="{accent_hex}" stroke="#a6812c" stroke-width="3"/>
-  <path d="M60 14 L104 29 V78 C104 106 84 126 60 137 C36 126 16 106 16 78 V29 Z"
-        fill="none" stroke="#f0e3c4" stroke-width="1.5" opacity="0.55"/>
-  <text x="60" y="92" text-anchor="middle" fill="#f6ecd4"
-        font-family="Cinzel Decorative" font-weight="700" font-size="44">{initial}</text>
-</svg>"""
 
 
 def svg_room_map():
@@ -158,31 +245,34 @@ def svg_constellation():
         f'L{x - 6.5} {y} L{x - 1.5} {y - 1.5} Z"/>'
         for x, y in ETOILES
     )
-    return f"""<svg viewBox="0 0 100 90" width="100%">
-  <rect x="0" y="0" width="100" height="90" fill="#24354f"/>
+    return f"""<svg viewBox="0 0 100 74" width="100%">
+  <rect x="0" y="0" width="100" height="74" fill="#24354f"/>
   {lines}{stars}
 </svg>"""
 
 
 def svg_castle_watermark():
-    """Silhouette de château composee de rectangles et de triangles."""
-    towers = ""
-    for x, w, h in ((30, 34, 130), (86, 26, 172), (128, 44, 108), (186, 26, 160), (236, 34, 138)):
-        top = 230 - h
-        merlons = "".join(
-            f'<rect x="{x + i * (w / 5.0):.1f}" y="{top - 9}"'
-            f' width="{w / 10.0:.1f}" height="9"/>'
-            for i in range(5)
-        )
-        roof = (f'<path d="M{x - 4} {top - 9} L{x + w / 2:.1f} {top - 40} '
-                f'L{x + w + 4} {top - 9} Z"/>') if h > 150 else ""
-        towers += f'<rect x="{x}" y="{top}" width="{w}" height="{h}"/>{merlons}{roof}'
-    return f"""<svg viewBox="0 0 300 240" width="118mm" class="watermark">
-  <g fill="#6b1420" opacity="0.10">
-    <rect x="0" y="200" width="300" height="30"/>
-    {towers}
-    <path d="M138 230 v-46 a12 12 0 0 1 24 0 v46 Z" fill="#efe3c4" opacity="1"/>
-  </g>
+    """Silhouette de chateau en filigrane, composee de rectangles et de fleches.
+
+    Sert de fond au certificat : elle reste tres claire pour ne pas gener
+    l'ecriture par-dessus.
+    """
+    parts = []
+    for x, w, h, roof in ((18, 30, 96, False), (56, 24, 138, True), (88, 52, 78, False),
+                          (150, 30, 168, True), (192, 52, 78, False), (254, 24, 138, True),
+                          (288, 30, 96, False)):
+        top = 218 - h
+        parts.append(f'<rect x="{x}" y="{top}" width="{w}" height="{h}"/>')
+        mw = w / 5.0                                     # 3 merlons par tour
+        for i in range(3):
+            parts.append(f'<rect x="{x + i * 2 * mw:.1f}" y="{top - 8}"'
+                         f' width="{mw:.1f}" height="8"/>')
+        if roof:
+            parts.append(f'<path d="M{x - 6} {top - 8} L{x + w / 2:.0f} {top - 46}'
+                         f' L{x + w + 6} {top - 8} Z"/>')
+    parts.append('<rect x="0" y="196" width="336" height="22"/>')
+    return f"""<svg viewBox="0 0 336 230" width="128mm" class="watermark">
+  <g fill="{BX}" opacity="0.07">{"".join(parts)}</g>
 </svg>"""
 
 
@@ -237,18 +327,24 @@ body {
 .card {
   position: relative;
   height: 100%;
-  padding: 13mm 14mm;
-  border: 1.6pt solid var(--bordeaux);
-  outline: 0.7pt solid var(--or);
-  outline-offset: 2.6mm;
+  padding: 15mm 16mm 12mm;
   display: flex; flex-direction: column;
 }
-.dot { position: absolute; width: 2.6mm; height: 2.6mm; border-radius: 50%;
-       background: var(--or); }
-.dot.tl { top: -1.3mm; left: -1.3mm; }
-.dot.tr { top: -1.3mm; right: -1.3mm; }
-.dot.bl { bottom: -1.3mm; left: -1.3mm; }
-.dot.br { bottom: -1.3mm; right: -1.3mm; }
+/* Les quatre coins ornementes dessinent le cadre a eux seuls : les filets
+   des coins se prolongent jusqu'au bord et se rejoignent. */
+.corner { position: absolute; width: 34mm; height: 34mm; }
+.corner.tl { top: 0; left: 0; }
+.corner.tr { top: 0; right: 0; }
+.corner.bl { bottom: 0; left: 0; }
+.corner.br { bottom: 0; right: 0; }
+/* Filets reliant les coins entre eux (positions calculees en Python). */
+.fr { position: absolute; }
+.fr.h { left: 34mm; right: 34mm; height: 0; }
+.fr.v { top: 34mm; bottom: 34mm; width: 0; }
+.fr.h.gold { border-top: 0.439mm solid var(--or); }
+.fr.h.bx   { border-top: 0.219mm solid var(--bordeaux); }
+.fr.v.gold { border-left: 0.439mm solid var(--or); }
+.fr.v.bx   { border-left: 0.219mm solid var(--bordeaux); }
 
 .accent-bordeaux { --accent: var(--bordeaux); }
 .accent-or       { --accent: var(--or); }
@@ -257,8 +353,8 @@ body {
 
 /* --- en-tete --- */
 .card-head { text-align: center; }
-.card-icon { color: var(--accent); margin-bottom: 3mm; }
-.card-icon .icon svg { width: 17mm; height: 17mm; }
+.card-icon { color: var(--accent); margin-bottom: 2mm; line-height: 0; }
+.card-icon .icon svg { width: 16mm; height: 16mm; }
 .icon { display: inline-block; line-height: 0; }
 .icon svg { width: 1em; height: 1em; fill: currentColor; }
 
@@ -269,24 +365,25 @@ body {
 }
 h1 {
   font-family: "Cinzel Decorative", serif; font-weight: 700;
-  font-size: 24pt; line-height: 1.15; margin: 2mm 0 0;
+  font-size: 25pt; line-height: 1.12; margin: 2mm 0 0;
   color: var(--accent);
 }
 .subtitle {
   font-family: "EB Garamond", serif; font-style: italic;
   font-size: 13pt; margin-top: 2mm; color: #4a3320;
 }
-.rule {
-  width: 46mm; height: 0; margin: 5mm auto 0;
-  border-top: 0.7pt solid var(--or); position: relative;
-}
-.rule::after {
-  content: ""; position: absolute; left: 50%; top: -1.3mm;
-  width: 2.6mm; height: 2.6mm; margin-left: -1.3mm;
-  background: var(--or); transform: rotate(45deg);
-}
+.rule { margin: 4mm 0 0; line-height: 0; }
+.fleuron { display: inline-block; }
 
-.card-body { flex: 1; padding-top: 7mm; }
+.card-body { flex: 1; padding-top: 6mm; }
+
+/* Lettrine montante : WeasyPrint ne gere pas un ::first-letter flottant,
+   on agrandit donc l'initiale sans la faire descendre dans le paragraphe. */
+.drop::first-letter {
+  font-family: "Cinzel Decorative", serif; font-weight: 700;
+  font-size: 21pt; color: var(--accent); padding-right: 0.6mm;
+}
+.drop { text-indent: 0; }
 .card-body p { margin: 0 0 4mm; }
 .footer {
   font-family: "MedievalSharp", serif; font-size: 9.5pt;
@@ -302,10 +399,17 @@ h2 {
 }
 .lead { font-size: 13.5pt; text-align: justify; }
 .box {
-  border: 0.7pt solid rgba(107, 20, 32, 0.55);
-  background: rgba(255, 253, 244, 0.42);
-  padding: 6mm 7mm; margin: 5mm 0;
+  border: 0.7pt solid rgba(166, 129, 44, 0.75);
+  background: rgba(255, 252, 242, 0.5);
+  padding: 5.5mm 7mm; margin: 5mm 0;
+  position: relative;
 }
+/* Petit losange dore centre sur le filet superieur de l'encadre. */
+.box::before {
+  content: ""; position: absolute; top: -1.5mm; left: 50%; margin-left: -1.5mm;
+  width: 3mm; height: 3mm; background: var(--or); transform: rotate(45deg);
+}
+.box.plain::before { display: none; }
 .box.tight { padding: 4mm 6mm; }
 ol, ul { margin: 0; padding-left: 6mm; }
 li { margin-bottom: 2.5mm; }
@@ -332,7 +436,7 @@ li { margin-bottom: 2.5mm; }
 }
 .cutout h3 {
   font-family: "Cinzel Decorative", serif; font-size: 14pt;
-  margin: 4mm 0 1mm; color: var(--accent);
+  margin: 3mm 0 1mm; color: var(--accent);
 }
 .cutout .sub { font-style: italic; font-size: 11pt; color: #57402a; }
 .cut {
@@ -358,15 +462,16 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
   font-family: "Cinzel", serif; font-size: 22pt; letter-spacing: 0.3em;
   text-align: center; color: var(--bordeaux); margin: 6mm 0;
 }
-.slots { text-align: center; font-family: "Cinzel", serif; font-size: 18pt;
-         letter-spacing: 0.55em; color: #7a6440; }
+.slots {
+  text-align: center; font-family: "Cinzel", serif; font-size: 14pt;
+  letter-spacing: 0.34em; color: #7a6440; white-space: nowrap;
+}
 
 /* --- certificat --- */
 .cert-wrap { position: relative; height: 100%; }
 .watermark {
-  position: absolute; left: 50%; top: 46%; width: 118mm;
-  margin-left: -59mm; margin-top: -47mm;
-  color: rgba(107, 20, 32, 0.10);
+  position: absolute; left: 50%; top: 52%; width: 128mm;
+  margin-left: -64mm; margin-top: -44mm;
 }
 .cert-content { position: relative; }
 .signatures { display: flex; flex-wrap: wrap; gap: 7mm; margin-top: 8mm; }
@@ -374,6 +479,21 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
 .sig .line { border-bottom: 0.7pt solid var(--encre); height: 13mm; }
 .sig .cap { font-family: "MedievalSharp", serif; font-size: 10pt;
             color: #6d5836; padding-top: 1.5mm; }
+/* Mise en page resserree : utilisee par la carte d'indices, dense par nature. */
+.compact .card-body { padding-top: 3mm; }
+.compact .box { padding: 3.4mm 6mm; margin: 3.4mm 0; }
+.compact h2 { font-size: 11pt; margin-bottom: 2mm; }
+.compact li { margin-bottom: 1.4mm; }
+.compact .lead { font-size: 11.5pt; }
+
+/* Cases du cadenas. */
+.slots-boxes { text-align: center; margin: 5mm 0 4mm; }
+.slots-boxes span {
+  display: inline-block; width: 14mm; height: 18mm; margin: 0 3mm;
+  border: 0.8pt solid var(--or);
+  background: rgba(255, 253, 245, 0.5);
+}
+
 .code-final {
   font-family: "Cinzel Decorative", serif; font-weight: 700;
   font-size: 40pt; letter-spacing: 0.16em; text-align: center;
@@ -396,7 +516,7 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
 
 def carte_briefing():
     body = f"""
-<p class="lead">Vous êtes quatre. Vous avez été pris à fabriquer une potion
+<p class="lead drop">Vous êtes quatre. Vous avez été pris à fabriquer une potion
 non autorisée dans les cachots. La sanction est tombée&nbsp;: <em>retenue</em>.</p>
 <p class="lead">Le concierge vous a enfermés dans une salle de classe
 désaffectée et a emporté la clé. Il reviendra dans <strong>quarante
@@ -428,7 +548,7 @@ minutes</strong>. Sur la porte, un cadenas a <strong>quatre chiffres</strong>.</
 
 def carte_plan():
     body = f"""
-<p class="lead">Le plan de la salle, relevé par un élève avant vous. Quatre
+<p class="lead drop">Le plan de la salle, relevé par un élève avant vous. Quatre
 emplacements ont été marqués. Explorez-les dans l'ordre.</p>
 <div class="box tight">{svg_room_map()}</div>
 <table class="small">
@@ -447,10 +567,10 @@ def carte_enigme_blasons():
     rows = "".join(
         f"<tr><td><strong>{m}</strong></td><td>{p} {n}</td>"
         f'<td class="center">&mdash;</td></tr>'
-        for m, p, n, _ in MAISONS
+        for m, p, n, _, _b in MAISONS
     )
     body = f"""
-<p class="lead">Quatre maisons, quatre fondateurs. Le tableau de la salle porte
+<p class="lead drop">Quatre maisons, quatre fondateurs. Le tableau de la salle porte
 encore la trace d'une leçon effacée&nbsp;: <em>&laquo;&nbsp;on ne classe pas les
 maisons par leur gloire, mais par le prénom de qui les fonda.&nbsp;&raquo;</em></p>
 <div class="box">
@@ -480,9 +600,9 @@ ACCENT_HEX = {"bordeaux": "#6b1420", "or": "#8a6a22", "vert": "#3d5240", "nuit":
 
 def carte_blasons_accessoire():
     cells = "".join(
-        f'<div class="cutout">{svg_shield(maison[0], ACCENT_HEX[a])}'
-        f"<h3>{maison}</h3><div class=\"sub\">fondée par {prénom} {nom}</div></div>"
-        for maison, prénom, nom, a in MAISONS
+        f'<div class="cutout">{svg_shield(bete, ACCENT_HEX[a])}'
+        f"<h3>{maison}</h3><div class=\"sub\">fondée par {prenom} {nom}</div></div>"
+        for maison, prenom, nom, a, bete in MAISONS
     )
     body = f"""
 <p class="lead center small">À imprimer, découper et disposer dans la pièce
@@ -502,7 +622,7 @@ def carte_enigme_chaudron():
         for i in range(1, 5)
     )
     body = f"""
-<p class="lead">Un chaudron froid trône sur l'étagère. À côté, une recette dont
+<p class="lead drop">Un chaudron froid trône sur l'étagère. À côté, une recette dont
 l'ordre des ingrédients a été effacé&nbsp;&mdash; il ne reste que les quatre
 remarques griffonnées en marge par l'apprenti.</p>
 <div class="box tight">
@@ -516,7 +636,7 @@ remarques griffonnées en marge par l'apprenti.</p>
 </div>
 <div class="grid-2" style="margin-top:5mm">
   <table class="small">
-    <tr><th class="center" style="width:16mm">Ordre</th><th>Ingredient</th></tr>
+    <tr><th class="center" style="width:16mm">Ordre</th><th>Ingrédient</th></tr>
     {slots}
   </table>
   <p class="small" style="align-self:center">Un seul ordre satisfait les quatre
@@ -531,7 +651,7 @@ remarques griffonnées en marge par l'apprenti.</p>
 
 
 def carte_ingredients_accessoire():
-    icons = ["round-bottom-flask", "wizard-staff", "gothic-cross", "fairy-wand"]
+    icons = ["moon", "racine", "ecaille", "plume"]
     cells = "".join(
         f'<div class="cutout"><div class="card-icon" style="color:var(--accent)">'
         f"{icon(ic)}</div><h3>{nom}</h3>"
@@ -562,7 +682,7 @@ def carte_grimoire():
   {row(alpha[half:])}{row(shifted[half:], "clair")}
 </table>"""
     body = f"""
-<p class="lead">Un grimoire ouvert sur le bureau, à la page des écritures
+<p class="lead drop">Un grimoire ouvert sur le bureau, à la page des écritures
 secrètes. Une main ancienne a note dans la marge&nbsp;:
 <em>&laquo;&nbsp;reçule de trois pas dans l'alphabet, et la lettre parlera.&nbsp;&raquo;</em></p>
 <div class="box">
@@ -587,9 +707,9 @@ A devient X, B devient Y, C devient Z.</p>"""
 
 def carte_sortilege():
     body = f"""
-<p class="lead">Sur le bureau, un parchemin plié en quatre. L'encre est
+<p class="lead drop">Sur le bureau, un parchemin plié en quatre. L'encre est
 récente&nbsp;&mdash; quelqu'un est passé par cette retenue avant vous, et a
-pris soin de ne pas ecrire en clair.</p>
+pris soin de ne pas écrire en clair.</p>
 <div class="box center">
   <h2>Le message</h2>
   <div class="cipher">{MESSAGE_CHIFFRE}</div>
@@ -601,7 +721,7 @@ pris soin de ne pas ecrire en clair.</p>
 <span class="answer-box">&nbsp;</span></p>
 <p class="center small" style="margin-top:6mm">
   {icon("quill-ink")} &nbsp;Un mot de quatre lettres ne peut pas être un nombre
-  à deux chiffres. Cherchez entre zero et neuf.</p>"""
+  à deux chiffres. Cherchez entre zéro et neuf.</p>"""
     return card("Le Sortilège Code", "Troisième épreuve &mdash; emplacement 4",
                 body, kicker="Chiffre n° 3", head_icon="magic-swirl", accent="bordeaux",
                 footer="Carte 8 &mdash; à poser sur le bureau, avec la carte 7")
@@ -609,7 +729,7 @@ pris soin de ne pas ecrire en clair.</p>
 
 def carte_astres():
     body = f"""
-<p class="lead">La fenêtre condamnée laisse passer un carré de ciel. Punaisée au
+<p class="lead drop">La fenêtre condamnée laisse passer un carré de ciel. Punaisée au
 volet, une carte du ciel dessinée à la plume&nbsp;: une constellation que les
 élèves d'astronomie appellent <em>la Retenue</em>.</p>
 <div class="box tight">{svg_constellation()}</div>
@@ -632,7 +752,7 @@ def carte_assemblage():
         for i, (nom, _, _) in enumerate(SOLUTIONS)
     )
     body = f"""
-<p class="lead">Quatre épreuves, quatre chiffres. Le cadenas de la porte n'en
+<p class="lead drop">Quatre épreuves, quatre chiffres. Le cadenas de la porte n'en
 demande pas davantage &mdash; mais il les veut <strong>dans l'ordre des
 épreuves</strong>.</p>
 <div class="box">
@@ -645,11 +765,11 @@ demande pas davantage &mdash; mais il les veut <strong>dans l'ordre des
 </div>
 <div class="box center">
   <h2>Code du cadenas</h2>
-  <div class="code-final">_ &nbsp; _ &nbsp; _ &nbsp; _</div>
+  <div class="slots-boxes"><span></span><span></span><span></span><span></span></div>
   <p class="small" style="margin:0">Une seule combinaison ouvre la porte.
   Vérifiez vos quatre chiffres avant d'essayer.</p>
 </div>
-<p class="center" style="margin-top:6mm">{icon("key")}</p>"""
+<p class="center" style="margin-top:5mm">{icon("key", ACCENT_HEX["or"], "13mm")}</p>"""
     return card("L'Assemblage Final", "Le cadenas de la porte", body,
                 kicker="Sortie", accent="or",
                 footer="Carte 10 &mdash; à remettre quand les 4 chiffres sont trouvés")
@@ -669,7 +789,7 @@ def carte_indices():
         ]),
         ("Le Sortilège", [
             "Le grimoire se lit de haut en bas&nbsp;: trouvez la lettre codée sur la ligne du haut.",
-            "Traitez chaque lettre separement. Commencez par le dernier mot, VHSW.",
+            "Traitez chaque lettre séparément. Commencez par le dernier mot, VHSW.",
             "V donne S, H donne E. Le mot fait quatre lettres et se termine en T.",
         ]),
         ("Les Astres", [
@@ -690,7 +810,7 @@ Ne la laissez pas dans la salle. Donnez les indices dans l'ordre, un seul a la
 fois, et seulement s'ils sont demandés.</p>
 {blocks}"""
     return card("Indices de Secours", "À l'usage exclusif du surveillant", body,
-                kicker="Animateur", head_icon="owl", accent="vert",
+                kicker="Animateur", head_icon="owl", accent="vert", extra="compact",
                 footer="Carte 11 &mdash; à retirer de la salle avant le début de la partie")
 
 
@@ -742,7 +862,7 @@ def guide_page(title, subtitle, body, footer):
     <header class="card-head">
       <h1>{title}</h1>
       <div class="subtitle">{subtitle}</div>
-      <div class="rule"></div>
+      <div class="rule">{svg_fleuron()}</div>
     </header>
     <div class="card-body">{body}</div>
     <div class="footer">{footer}</div>
