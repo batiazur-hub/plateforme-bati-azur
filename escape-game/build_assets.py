@@ -22,12 +22,27 @@ ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT / "assets"
 FONTS = ASSETS / "fonts"
 ICONS = ASSETS / "icons"
+VINTAGE = ASSETS / "vintage"
 TEXTURES = ASSETS / "textures"
 
 CACHE = Path(tempfile.gettempdir()) / "escape-game-sources"
 
 FONTS_REPO = "https://github.com/google/fonts"
 ICONS_REPO = "https://github.com/game-icons/icons"
+# Ornements graves du XIXe siecle, tracés en vectoriel et places en CC0
+# (domaine public) : lettrines, filets, rosaces.
+VINTAGE_REPO = "https://github.com/WelshPixie/vintageart"
+
+# nom local -> chemin dans le depot vintageart
+VINTAGE_FILES = {
+    "initiale-V": "letters/ornatev2.svg",
+    "initiale-L": "letters/ornatel.svg",
+    "initiale-Q": "letters/ornateq.svg",
+    "initiale-S": "letters/ornates.svg",
+    "filet": "dividers/divider11.svg",
+    "rosace": "ornaments/ornament22.svg",
+}
+VINTAGE_SPARSE_DIRS = ["letters", "dividers", "ornaments"]
 
 # nom local -> chemin dans le depot google/fonts (licence OFL)
 FONT_FILES = {
@@ -154,6 +169,36 @@ def download_icons() -> None:
         print(f"  + {name}.svg")
 
 
+def clean_vintage(svg: str) -> str:
+    """Allege un SVG produit par Inkscape et rend son encre recolorable.
+
+    Ces fichiers embarquent metadonnees, calques et attributs sodipodi/inkscape
+    qui triplent leur poids sans rien apporter au rendu.
+    """
+    svg = re.sub(r"<metadata\b.*?</metadata>", "", svg, flags=re.S)
+    svg = re.sub(r"<sodipodi:namedview\b.*?(?:/>|</sodipodi:namedview>)", "", svg, flags=re.S)
+    svg = re.sub(r"<\?xml[^>]*\?>|<!--.*?-->", "", svg, flags=re.S)
+    svg = re.sub(r'\s(?:inkscape|sodipodi):[\w-]+="[^"]*"', "", svg)
+    svg = svg.replace("fill:#000000", "fill:currentColor")
+    return re.sub(r"\n\s*\n", "\n", svg).strip()
+
+
+def download_vintage() -> None:
+    VINTAGE.mkdir(parents=True, exist_ok=True)
+    todo = {n: rel for n, rel in VINTAGE_FILES.items() if not (VINTAGE / f"{n}.svg").exists()}
+    for name in VINTAGE_FILES:
+        if name not in todo:
+            print(f"  = {name}.svg (deja present)")
+    if not todo:
+        return
+    src = sparse_clone(VINTAGE_REPO, CACHE / "vintageart", VINTAGE_SPARSE_DIRS)
+    for name, rel in todo.items():
+        raw = (src / rel).read_text(encoding="utf-8", errors="ignore")
+        out = clean_vintage(raw)
+        (VINTAGE / f"{name}.svg").write_text(out, encoding="utf-8")
+        print(f"  + {name}.svg ({len(raw) // 1024} Ko -> {len(out) // 1024} Ko)")
+
+
 def noise_layer(w: int, h: int, scale: int, blur: float, rng) -> np.ndarray:
     """Bruit basse frequence : petit tableau aleatoire agrandi puis floute."""
     small = rng.random((max(2, h // scale), max(2, w // scale)))
@@ -202,6 +247,8 @@ def main() -> None:
     download_fonts()
     print("Icones (CC-BY, game-icons.net) :")
     download_icons()
+    print("Ornements graves (CC0, vintageart) :")
+    download_vintage()
     print("Texture parchemin (generee par code) :")
     build_parchment()
     print("\nAssets prets dans", ASSETS)

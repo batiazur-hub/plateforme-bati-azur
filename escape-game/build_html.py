@@ -88,6 +88,49 @@ def icon_inner(name: str, color: str) -> str:
     return inner.replace('fill="currentColor"', f'fill="{color}"')
 
 
+def _vintage_svg(name: str):
+    """Renvoie (viewBox, contenu) d'un ornement grave, ou None s'il manque."""
+    path = ASSETS / "vintage" / f"{name}.svg"
+    if not path.exists():
+        return None
+    raw = path.read_text(encoding="utf-8")
+    m = re.search(r'viewBox="([^"]+)"', raw)
+    if not m:
+        return None
+    inner = re.sub(r"^.*?<svg[^>]*>", "", raw, flags=re.S)
+    inner = re.sub(r"</svg>\s*$", "", inner, flags=re.S)
+    return m.group(1), inner
+
+
+def vintage(name: str, color: str, width: str, *, height: str = "", cls: str = "") -> str:
+    """Insere un ornement CC0 du depot vintageart, recolore.
+
+    La couleur est injectee dans le SVG : WeasyPrint n'applique pas le CSS du
+    document a l'interieur d'un SVG en ligne.
+    """
+    got = _vintage_svg(name)
+    if not got:
+        return ""
+    vb, inner = got
+    h = f' height="{height}"' if height else ""
+    return (f'<svg class="{cls}" viewBox="{vb}" width="{width}"{h}'
+            f' preserveAspectRatio="xMidYMid meet">'
+            f'{inner.replace("fill:currentColor", f"fill:{color}")}</svg>')
+
+
+def drop_cap(letter: str, color: str) -> str:
+    """Lettrine gravee flottant a gauche du premier paragraphe."""
+    got = _vintage_svg(f"initiale-{letter}")
+    if not got:
+        return ""
+    vb, inner = got
+    # Le flottement est pose en style inline : une regle de classe se fait
+    # ignorer sur un SVG remplace dans certains contextes WeasyPrint.
+    return (f'<svg viewBox="{vb}" width="17mm" height="17mm"'
+            f' style="float:left;width:17mm;height:17mm;margin:1mm 3mm 0.5mm 0">'
+            f'{inner.replace("fill:currentColor", f"fill:{color}")}</svg>')
+
+
 def svg_corner(flip_x: bool = False, flip_y: bool = False) -> str:
     """Coin ornemental : double filet, volute fuselee et losange.
 
@@ -163,6 +206,12 @@ FRAME_RULES = "".join(
 )
 
 
+def divider_for(accent: str) -> str:
+    """Filet grave sous le titre, avec repli sur le fleuron trace en code."""
+    return (vintage("filet", ACCENT_HEX[accent], "52mm", cls="filet")
+            or svg_fleuron(ACCENT_HEX[accent]))
+
+
 def card(title, subtitle, body, *, kicker="", footer="", accent="bordeaux",
          head_icon="", extra=""):
     """Cadre commun a toutes les cartes : coins ornementes relies par des filets."""
@@ -186,7 +235,7 @@ def card(title, subtitle, body, *, kicker="", footer="", accent="bordeaux",
       {kick}
       <h1>{title}</h1>
       {sub}
-      <div class="rule">{svg_fleuron(ACCENT_HEX[accent])}</div>
+      <div class="rule">{divider_for(accent)}</div>
     </header>
     <div class="card-body">{body}</div>
     {foot}
@@ -245,7 +294,7 @@ def svg_constellation():
         f'L{x - 6.5} {y} L{x - 1.5} {y - 1.5} Z"/>'
         for x, y in ETOILES
     )
-    return f"""<svg viewBox="0 0 100 74" width="100%">
+    return f"""<svg viewBox="0 0 100 74" width="86%">
   <rect x="0" y="0" width="100" height="74" fill="#24354f"/>
   {lines}{stars}
 </svg>"""
@@ -327,8 +376,7 @@ body {
 .card {
   position: relative;
   height: 100%;
-  padding: 15mm 16mm 12mm;
-  display: flex; flex-direction: column;
+  padding: 15mm 16mm 10mm;
 }
 /* Les quatre coins ornementes dessinent le cadre a eux seuls : les filets
    des coins se prolongent jusqu'au bord et se rejoignent. */
@@ -375,17 +423,22 @@ h1 {
 .rule { margin: 4mm 0 0; line-height: 0; }
 .fleuron { display: inline-block; }
 
-.card-body { flex: 1; padding-top: 6mm; }
+.card-body { padding-top: 6mm; min-height: 172mm; }
 
-/* Lettrine montante : WeasyPrint ne gere pas un ::first-letter flottant,
-   on agrandit donc l'initiale sans la faire descendre dans le paragraphe. */
-.drop::first-letter {
-  font-family: "Cinzel Decorative", serif; font-weight: 700;
-  font-size: 21pt; color: var(--accent); padding-right: 0.6mm;
+/* Lettrine gravee : un ::first-letter flottant fait planter WeasyPrint, mais
+   un vrai element flottant passe sans probleme. */
+.dropcap {
+  float: left; width: 17mm; height: 17mm;
+  margin: 1mm 3mm 0.5mm 0;
 }
 .drop { text-indent: 0; }
+.drop::after { content: ""; display: block; clear: both; }
+.filet { display: inline-block; }
 .card-body p { margin: 0 0 4mm; }
+/* Pied dans le flux : en absolu il se faisait recouvrir par les cartes
+   denses. La hauteur minimale du corps le maintient en bas des cartes aerees. */
 .footer {
+  margin-top: 6mm;
   font-family: "MedievalSharp", serif; font-size: 9.5pt;
   text-align: center; color: #6d5836; padding-top: 4mm;
   border-top: 0.5pt solid rgba(166, 129, 44, 0.5);
@@ -480,11 +533,11 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
 .sig .cap { font-family: "MedievalSharp", serif; font-size: 10pt;
             color: #6d5836; padding-top: 1.5mm; }
 /* Mise en page resserree : utilisee par la carte d'indices, dense par nature. */
-.compact .card-body { padding-top: 3mm; }
-.compact .box { padding: 3.4mm 6mm; margin: 3.4mm 0; }
-.compact h2 { font-size: 11pt; margin-bottom: 2mm; }
-.compact li { margin-bottom: 1.4mm; }
-.compact .lead { font-size: 11.5pt; }
+.compact .card-body { padding-top: 3mm; min-height: 0; }
+.compact .box { padding: 3mm 6mm; margin: 2.8mm 0; }
+.compact h2 { font-size: 10.5pt; margin-bottom: 1.6mm; }
+.compact li { margin-bottom: 1.1mm; }
+.compact .lead { font-size: 11pt; margin-bottom: 2mm; }
 
 /* Cases du cadenas. */
 .slots-boxes { text-align: center; margin: 5mm 0 4mm; }
@@ -502,7 +555,7 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
 
 /* --- guide animateur --- */
 .guide .page { padding: 16mm 18mm; }
-.guide .sheet { height: 100%; display: flex; flex-direction: column; }
+.guide .sheet { height: 100%; position: relative; padding-bottom: 16mm; }
 .guide h1 { font-size: 21pt; text-align: center; }
 .guide h2 { text-align: left; margin-top: 7mm; }
 .guide .lead { font-size: 12.5pt; }
@@ -516,7 +569,7 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
 
 def carte_briefing():
     body = f"""
-<p class="lead drop">Vous êtes quatre. Vous avez été pris à fabriquer une potion
+<p class="lead drop">{drop_cap("V", ACCENT_HEX["bordeaux"])}ous êtes quatre. Vous avez été pris à fabriquer une potion
 non autorisée dans les cachots. La sanction est tombée&nbsp;: <em>retenue</em>.</p>
 <p class="lead">Le concierge vous a enfermés dans une salle de classe
 désaffectée et a emporté la clé. Il reviendra dans <strong>quarante
@@ -548,7 +601,7 @@ minutes</strong>. Sur la porte, un cadenas a <strong>quatre chiffres</strong>.</
 
 def carte_plan():
     body = f"""
-<p class="lead drop">Le plan de la salle, relevé par un élève avant vous. Quatre
+<p class="lead drop">{drop_cap("L", ACCENT_HEX["nuit"])}e plan de la salle, relevé par un élève avant vous. Quatre
 emplacements ont été marqués. Explorez-les dans l'ordre.</p>
 <div class="box tight">{svg_room_map()}</div>
 <table class="small">
@@ -570,7 +623,7 @@ def carte_enigme_blasons():
         for m, p, n, _, _b in MAISONS
     )
     body = f"""
-<p class="lead drop">Quatre maisons, quatre fondateurs. Le tableau de la salle porte
+<p class="lead drop">{drop_cap("Q", ACCENT_HEX["bordeaux"])}uatre maisons, quatre fondateurs. Le tableau de la salle porte
 encore la trace d'une leçon effacée&nbsp;: <em>&laquo;&nbsp;on ne classe pas les
 maisons par leur gloire, mais par le prénom de qui les fonda.&nbsp;&raquo;</em></p>
 <div class="box">
@@ -622,7 +675,7 @@ def carte_enigme_chaudron():
         for i in range(1, 5)
     )
     body = f"""
-<p class="lead drop">Un chaudron froid trône sur l'étagère. À côté, une recette dont
+<p class="lead drop">{drop_cap("S", ACCENT_HEX["vert"])}ur l'étagère trône un chaudron froid. À côté, une recette dont
 l'ordre des ingrédients a été effacé&nbsp;&mdash; il ne reste que les quatre
 remarques griffonnées en marge par l'apprenti.</p>
 <div class="box tight">
@@ -682,8 +735,8 @@ def carte_grimoire():
   {row(alpha[half:])}{row(shifted[half:], "clair")}
 </table>"""
     body = f"""
-<p class="lead drop">Un grimoire ouvert sur le bureau, à la page des écritures
-secrètes. Une main ancienne a note dans la marge&nbsp;:
+<p class="lead drop">{drop_cap("L", ACCENT_HEX["or"])}e grimoire est ouvert sur le bureau, à la page des écritures
+secrètes. Une main ancienne a noté dans la marge&nbsp;:
 <em>&laquo;&nbsp;reçule de trois pas dans l'alphabet, et la lettre parlera.&nbsp;&raquo;</em></p>
 <div class="box">
   <h2>Table de déchiffrement &mdash; décalage de 3</h2>
@@ -707,7 +760,7 @@ A devient X, B devient Y, C devient Z.</p>"""
 
 def carte_sortilege():
     body = f"""
-<p class="lead drop">Sur le bureau, un parchemin plié en quatre. L'encre est
+<p class="lead drop">{drop_cap("S", ACCENT_HEX["bordeaux"])}ur le bureau, un parchemin plié en quatre. L'encre est
 récente&nbsp;&mdash; quelqu'un est passé par cette retenue avant vous, et a
 pris soin de ne pas écrire en clair.</p>
 <div class="box center">
@@ -729,17 +782,17 @@ pris soin de ne pas écrire en clair.</p>
 
 def carte_astres():
     body = f"""
-<p class="lead drop">La fenêtre condamnée laisse passer un carré de ciel. Punaisée au
+<p class="lead drop">{drop_cap("L", ACCENT_HEX["nuit"])}a fenêtre condamnée laisse passer un carré de ciel. Punaisée au
 volet, une carte du ciel dessinée à la plume&nbsp;: une constellation que les
 élèves d'astronomie appellent <em>la Retenue</em>.</p>
-<div class="box tight">{svg_constellation()}</div>
+<div class="box tight center" style="margin:4mm 0">{svg_constellation()}</div>
 <p class="lead">Le trace doré relie les étoiles entre elles, mais toutes ne sont
 pas sur le trace principal. <strong>Comptez-les toutes</strong>, celles du
 trace comme celles des embranchements.</p>
 <p class="mono-answer">Nombre d'étoiles de la constellation
 <span class="answer-box">&nbsp;</span></p>
-<p class="center small" style="margin-top:5mm">
-  {icon("crystal-ball")} &nbsp;Comptez les points, pas les segments.</p>"""
+<p class="center small" style="margin-top:3mm">
+  {icon("crystal-ball", ACCENT_HEX["nuit"], "4mm")} &nbsp;Comptez les points, pas les segments.</p>"""
     return card("La Carte des Astres", "Quatrième épreuve &mdash; emplacement 2",
                 body, kicker="Chiffre n° 4", head_icon="star-swirl", accent="nuit",
                 footer="Carte 9 &mdash; à faire punaiser pres de la fenêtre")
@@ -752,7 +805,7 @@ def carte_assemblage():
         for i, (nom, _, _) in enumerate(SOLUTIONS)
     )
     body = f"""
-<p class="lead drop">Quatre épreuves, quatre chiffres. Le cadenas de la porte n'en
+<p class="lead drop">{drop_cap("Q", ACCENT_HEX["or"])}uatre épreuves, quatre chiffres. Le cadenas de la porte n'en
 demande pas davantage &mdash; mais il les veut <strong>dans l'ordre des
 épreuves</strong>.</p>
 <div class="box">
