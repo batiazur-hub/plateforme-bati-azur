@@ -55,7 +55,38 @@ ce dépôt**.
 Attribution requise par CC BY, portée dans le guide animateur :
 *Icons by game-icons.net*.
 
-### Pourquoi aucune ressource « Harry Potter » n'a été retenue
+## Mettre vos propres visuels Harry Potter
+
+Le jeu accepte vos images sans toucher au code. Déposez-les dans
+`assets/perso/` puis relancez `python render.py` :
+
+| Fichier | Remplace |
+|---|---|
+| `blason-gryffondor.*` … `blason-serpentard.*` | les écus de la carte 4 |
+| `filigrane.*` | le fond du certificat (carte 12) |
+
+Extensions acceptées : `.svg .png .jpg .jpeg .webp .gif`. Les maisons sans
+fichier gardent l'écu héraldique généré — vous pouvez donc n'en remplacer
+qu'une partie. Voir `assets/perso/LISEZ-MOI.txt`.
+
+**Ce dossier est exclu du dépôt Git**, volontairement. Un visuel sous droit
+d'auteur utilisé chez soi pour une partie entre amis relève de l'usage privé ;
+le même fichier poussé sur un dépôt public devient une publication, ce qui est
+une autre affaire. Le mécanisme est versionné, vos images restent chez vous.
+
+### Où les trouver
+
+La licence qu'il vous faut n'est pas « libre de droits » mais **usage
+personnel** — et celle-là est courante. Les banques de SVG Harry Potter
+(Vecteezy, Free SVG Download, The Navage Patch, Happiness is Homemade)
+distribuent leurs fichiers en *personal use only* : redistribution et usage
+commercial interdits, usage privé et scolaire autorisés. C'est exactement le
+cadre d'une partie entre amis.
+
+Ces sites sont bloqués par le proxy réseau de l'environnement de build, donc
+le téléchargement se fait depuis votre navigateur.
+
+### Pourquoi le dépôt lui-même n'en contient aucune
 
 Une recherche a été menée spécifiquement sur les ressources HP dites libres,
 créations de fans comprises. Conclusion : **il n'en existe pas de réellement

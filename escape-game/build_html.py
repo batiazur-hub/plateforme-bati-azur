@@ -56,6 +56,37 @@ TRACE = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (4, 6), (6, 7)]
 # Primitives de mise en page
 # --------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------
+# Visuels personnels (dossier assets/perso/, hors depot)
+# --------------------------------------------------------------------------
+
+PERSO = ASSETS / "perso"
+PERSO_EXTS = (".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif")
+
+
+def perso(nom: str):
+    """Retourne le chemin d'un visuel personnel depose par l'utilisateur.
+
+    Permet de substituer ses propres images (blasons, filigrane) a celles
+    generees par le code, sans toucher au reste du programme. Le dossier est
+    volontairement exclu du depot : ce qu'on y met ne regarde que soi.
+    """
+    for ext in PERSO_EXTS:
+        f = PERSO / f"{nom}{ext}"
+        if f.exists():
+            return f
+    return None
+
+
+def perso_img(nom: str, *, width: str, cls: str = ""):
+    """Balise <img> vers un visuel personnel, ou None s'il n'y en a pas."""
+    f = perso(nom)
+    if f is None:
+        return None
+    rel = f.relative_to(ROOT).as_posix()
+    return f'<img class="{cls}" src="{rel}" style="width:{width};height:auto" alt="">'
+
+
 def _icon_svg(name: str) -> str:
     path = ASSETS / "icons" / f"{name}.svg"
     return path.read_text(encoding="utf-8") if path.exists() else ""
@@ -540,6 +571,10 @@ td { border-bottom: 0.4pt solid rgba(166, 129, 44, 0.35); }
 .compact .lead { font-size: 11pt; margin-bottom: 2mm; }
 
 /* Cases du cadenas. */
+/* Visuels personnels deposes dans assets/perso/. */
+.blason-perso { display: block; margin: 0 auto; }
+.perso-wm { opacity: 0.10; }
+
 .slots-boxes { text-align: center; margin: 5mm 0 4mm; }
 .slots-boxes span {
   display: inline-block; width: 14mm; height: 18mm; margin: 0 3mm;
@@ -651,9 +686,15 @@ premier chiffre <span class="answer-box">&nbsp;</span></p>
 ACCENT_HEX = {"bordeaux": "#6b1420", "or": "#8a6a22", "vert": "#3d5240", "nuit": "#24354f"}
 
 
+def blason(maison: str, bete: str, accent: str) -> str:
+    """Ecu d'une maison : visuel personnel s'il y en a un, sinon ecu genere."""
+    return (perso_img(f"blason-{maison.lower()}", width="34mm", cls="blason-perso")
+            or svg_shield(bete, ACCENT_HEX[accent]))
+
+
 def carte_blasons_accessoire():
     cells = "".join(
-        f'<div class="cutout">{svg_shield(bete, ACCENT_HEX[a])}'
+        f'<div class="cutout">{blason(maison, bete, a)}'
         f"<h3>{maison}</h3><div class=\"sub\">fondée par {prenom} {nom}</div></div>"
         for maison, prenom, nom, a, bete in MAISONS
     )
@@ -891,7 +932,9 @@ une insolence remarquable, et sont déclarés
   Fait à l'école, le <span class="answer-box">&nbsp;</span>
   &nbsp;&nbsp;Contresigné&nbsp;:
   <span class="answer-box">&nbsp;</span></p>"""
-    body = f'<div class="cert-wrap">{svg_castle_watermark()}' \
+    fond = (perso_img("filigrane", width="128mm", cls="watermark perso-wm")
+            or svg_castle_watermark())
+    body = f'<div class="cert-wrap">{fond}' \
            f'<div class="cert-content">{inner}</div></div>'
     return card("Certificat d'Évasion", "Décerné aux quatre élèves de la salle 4-B",
                 body, kicker="Victoire", head_icon="top-hat", accent="bordeaux",

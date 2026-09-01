@@ -1,1 +1,5 @@
 build/
+
+# Visuels personnels : le mecanisme est versionne, pas les images.
+assets/perso/*
+!assets/perso/LISEZ-MOI.txt

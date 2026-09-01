@@ -22,6 +22,13 @@ def main() -> int:
         print("Assets manquants : lancez d'abord `python build_assets.py`.", file=sys.stderr)
         return 1
 
+    trouves = [f.name for f in sorted((ROOT / "assets" / "perso").glob("*"))
+               if f.suffix.lower() in build_html.PERSO_EXTS]
+    if trouves:
+        print("Visuels personnels pris en compte :", ", ".join(trouves))
+    else:
+        print("Aucun visuel personnel (voir assets/perso/LISEZ-MOI.txt).")
+
     BUILD.mkdir(exist_ok=True)
     for html_name, pdf_name, builder in OUTPUTS:
         html = builder()

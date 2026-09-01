@@ -1,0 +1,29 @@
+DOSSIER DE VISUELS PERSONNELS
+=============================
+
+Deposez ici vos propres images : elles remplaceront automatiquement les
+visuels generes par le code, au prochain `python render.py`.
+
+Noms de fichiers reconnus (extensions .svg .png .jpg .jpeg .webp .gif) :
+
+  blason-gryffondor.*    ecu de Gryffondor      (carte 4)
+  blason-poufsouffle.*   ecu de Poufsouffle     (carte 4)
+  blason-serdaigle.*     ecu de Serdaigle       (carte 4)
+  blason-serpentard.*    ecu de Serpentard      (carte 4)
+  filigrane.*            fond du certificat     (carte 12)
+
+Vous pouvez n'en deposer qu'un ou deux : les maisons sans fichier gardent
+l'ecu heraldique genere par le programme.
+
+Conseils :
+  - PNG a fond transparent, cote le plus long >= 600 px pour une impression nette.
+  - Pour le filigrane, une image tres claire ou tres contrastee : elle est
+    affichee a 10 % d'opacite sous du texte manuscrit.
+
+IMPORTANT
+---------
+Ce dossier est exclu du depot Git (voir .gitignore) : son contenu reste sur
+votre machine et n'est pas publie. C'est voulu. Un visuel sous droit d'auteur
+utilise chez soi pour une partie entre amis releve de l'usage prive ; le meme
+fichier pousse sur un depot public devient une publication, ce qui est une
+autre affaire. Le mecanisme est versionne, les images ne le sont pas.
