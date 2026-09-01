@@ -4,21 +4,37 @@ DOSSIER DE VISUELS PERSONNELS
 Deposez ici vos propres images : elles remplaceront automatiquement les
 visuels generes par le code, au prochain `python render.py`.
 
-Noms de fichiers reconnus (extensions .svg .png .jpg .jpeg .webp .gif) :
+Emplacements disponibles :
 
-  blason-gryffondor.*    ecu de Gryffondor      (carte 4)
-  blason-poufsouffle.*   ecu de Poufsouffle     (carte 4)
-  blason-serdaigle.*     ecu de Serdaigle       (carte 4)
-  blason-serpentard.*    ecu de Serpentard      (carte 4)
-  filigrane.*            fond du certificat     (carte 12)
+  les quatre ecus de la carte 4
+  le filigrane du certificat (carte 12)
+
+INUTILE DE RENOMMER VOS FICHIERS
+--------------------------------
+Il suffit que le nom du fichier CONTIENNE le nom de la maison, en francais ou
+en anglais, quelles que soient les majuscules, accents ou ponctuations. Tous
+ces noms sont reconnus :
+
+  Gryffindor-crest-vector-01.png      -> ecu de Gryffondor
+  poufsouffle.png                     -> ecu de Poufsouffle
+  Ravenclaw_Crest_HQ.png              -> ecu de Serdaigle
+  blason-serpentard.svg               -> ecu de Serpentard
+  hogwarts-castle.jpg                 -> filigrane du certificat
+
+Mots-cles : gryffondor/gryffindor, poufsouffle/hufflepuff,
+serdaigle/ravenclaw, serpentard/slytherin, filigrane/watermark/poudlard/
+hogwarts.
+
+Extensions acceptees : .svg .png .jpg .jpeg .webp .gif
 
 Vous pouvez n'en deposer qu'un ou deux : les maisons sans fichier gardent
-l'ecu heraldique genere par le programme.
+l'ecu heraldique genere par le programme. `render.py` affiche au demarrage la
+liste des fichiers qu'il a reconnus.
 
-Conseils :
-  - PNG a fond transparent, cote le plus long >= 600 px pour une impression nette.
-  - Pour le filigrane, une image tres claire ou tres contrastee : elle est
-    affichee a 10 % d'opacite sous du texte manuscrit.
+Conseils d'impression :
+  - PNG a fond transparent, cote le plus long >= 600 px.
+  - Pour le filigrane, une image claire : elle est posee a 10 % d'opacite
+    sous du texte que l'on remplit a la main.
 
 IMPORTANT
 ---------

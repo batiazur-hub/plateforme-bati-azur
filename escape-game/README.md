@@ -67,7 +67,13 @@ Le jeu accepte vos images sans toucher au code. Déposez-les dans
 
 Extensions acceptées : `.svg .png .jpg .jpeg .webp .gif`. Les maisons sans
 fichier gardent l'écu héraldique généré — vous pouvez donc n'en remplacer
-qu'une partie. Voir `assets/perso/LISEZ-MOI.txt`.
+qu'une partie.
+
+**Inutile de renommer vos téléchargements** : il suffit que le nom du fichier
+contienne celui de la maison, en français ou en anglais, casse et ponctuation
+indifférentes. `Gryffindor-crest-vector-01.png` ou `Ravenclaw_Crest_HQ.png`
+sont reconnus tels quels. `render.py` affiche au démarrage ce qu'il a trouvé.
+Détail dans `assets/perso/LISEZ-MOI.txt`.
 
 **Ce dossier est exclu du dépôt Git**, volontairement. Un visuel sous droit
 d'auteur utilisé chez soi pour une partie entre amis relève de l'usage privé ;
@@ -83,8 +89,12 @@ distribuent leurs fichiers en *personal use only* : redistribution et usage
 commercial interdits, usage privé et scolaire autorisés. C'est exactement le
 cadre d'une partie entre amis.
 
-Ces sites sont bloqués par le proxy réseau de l'environnement de build, donc
-le téléchargement se fait depuis votre navigateur.
+Le téléchargement se fait depuis votre navigateur : le proxy réseau de
+l'environnement de build bloque tous les hôtes sauf GitHub — y compris les
+sites officiels (`wizardingworld.com`, `harrypotter.com`, `warnerbros.com`),
+vérifié. Ces derniers ne distribuent de toute façon pas leurs blasons comme
+ressources téléchargeables, et leurs conditions d'utilisation en interdisent
+l'extraction.
 
 ### Pourquoi le dépôt lui-même n'en contient aucune
 

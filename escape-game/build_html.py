@@ -6,6 +6,7 @@ Une fonction par carte, toutes construites sur les memes primitives
 """
 
 import re
+import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -63,18 +64,48 @@ TRACE = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (4, 6), (6, 7)]
 PERSO = ASSETS / "perso"
 PERSO_EXTS = (".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif")
 
+# Synonymes acceptes pour chaque emplacement : on reconnait aussi bien les noms
+# francais qu'anglais, pour ne pas avoir a renommer un fichier telecharge.
+PERSO_ALIAS = {
+    "blason-gryffondor": ("gryffondor", "gryffindor"),
+    "blason-poufsouffle": ("poufsouffle", "hufflepuff"),
+    "blason-serdaigle": ("serdaigle", "ravenclaw"),
+    "blason-serpentard": ("serpentard", "slytherin"),
+    "filigrane": ("filigrane", "watermark", "hogwarts", "poudlard"),
+}
+
+
+def _normalise(nom: str) -> str:
+    """Minuscules sans accents ni separateurs, pour comparer des noms de fichiers."""
+    table = str.maketrans("aaaeeeeiioouuuc", "aaaeeeeiioouuuc")
+    nom = unicodedata.normalize("NFD", nom.lower())
+    nom = "".join(c for c in nom if unicodedata.category(c) != "Mn").translate(table)
+    return re.sub(r"[^a-z0-9]+", "", nom)
+
 
 def perso(nom: str):
-    """Retourne le chemin d'un visuel personnel depose par l'utilisateur.
+    """Cherche un visuel personnel pour l'emplacement `nom`.
 
-    Permet de substituer ses propres images (blasons, filigrane) a celles
-    generees par le code, sans toucher au reste du programme. Le dossier est
-    volontairement exclu du depot : ce qu'on y met ne regarde que soi.
+    On accepte trois formes, de la plus stricte a la plus souple : le nom exact,
+    un synonyme connu, ou n'importe quel fichier dont le nom *contient* le
+    synonyme. La derniere permet de deposer un fichier telecharge sans le
+    renommer (« Gryffindor-crest-vector-01.png » est reconnu tel quel).
     """
-    for ext in PERSO_EXTS:
-        f = PERSO / f"{nom}{ext}"
-        if f.exists():
+    if not PERSO.is_dir():
+        return None
+    fichiers = [f for f in sorted(PERSO.iterdir())
+                if f.is_file() and f.suffix.lower() in PERSO_EXTS]
+    for f in fichiers:                                   # nom exact
+        if _normalise(f.stem) == _normalise(nom):
             return f
+    cles = PERSO_ALIAS.get(nom, (nom,))
+    for exact in (True, False):                          # synonyme, puis inclusion
+        for f in fichiers:
+            base = _normalise(f.stem)
+            for cle in cles:
+                k = _normalise(cle)
+                if (base == k) if exact else (k in base):
+                    return f
     return None
 
 
