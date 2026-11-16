@@ -1,0 +1,8 @@
+{
+  "name": "hub-batiazur",
+  "private": true,
+  "description": "Portail Bati Azur (batiazurpiscine.fr) : connexion, hub, app iPhone du Suivi",
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0"
+  }
+}

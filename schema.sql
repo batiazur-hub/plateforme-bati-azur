@@ -21,3 +21,15 @@ CREATE TABLE IF NOT EXISTS securite (
   email TEXT NOT NULL DEFAULT '', quoi TEXT NOT NULL, ip TEXT NOT NULL DEFAULT ''
 );
 INSERT OR IGNORE INTO comptes (email) VALUES ('bati.azur03@gmail.com');
+
+-- App iPhone du Suivi : appareils abonnes aux notifications, et etat de la
+-- tache planifiee (jour du dernier bilan, dernier contact signale).
+CREATE TABLE IF NOT EXISTS abonnements (
+  endpoint   TEXT PRIMARY KEY,
+  abonnement TEXT NOT NULL,
+  email      TEXT NOT NULL DEFAULT '',
+  appareil   TEXT NOT NULL DEFAULT '',
+  cree       TEXT NOT NULL DEFAULT (datetime('now')),
+  maj        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS etat (cle TEXT PRIMARY KEY, valeur TEXT NOT NULL DEFAULT '');

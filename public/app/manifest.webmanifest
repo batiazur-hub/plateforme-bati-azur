@@ -1,0 +1,16 @@
+{
+  "name": "Suivi des demandes — Bati Azur",
+  "short_name": "Suivi",
+  "id": "/app/",
+  "start_url": "/app/#matin",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#F2F4F7",
+  "theme_color": "#ffffff",
+  "lang": "fr",
+  "icons": [
+    { "src": "/app/icones/suivi-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app/icones/suivi-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app/icones/suivi-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

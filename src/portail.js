@@ -11,6 +11,8 @@
  */
 import { EmailMessage } from "cloudflare:email";
 
+import { routeApp, planifie } from "./app.js";
+
 const DOMAINE = "batiazurpiscine.fr";
 const COOKIE = "portail";
 const DUREE = 60 * 60 * 24 * 30;          // 30 jours
@@ -101,6 +103,17 @@ async function session(requete, env) {
 }
 
 /** Adresse de retour apres connexion : seulement chez nous. */
+/** Nouveau cookie si la session a plus d'un jour : un appareil utilise
+ *  regulierement reste connecte. "" sinon. */
+async function renouvellement(requete, env) {
+  const brut = (requete.headers.get("cookie") || "").split(/;\s*/).find(c => c.startsWith(COOKIE + "="));
+  if (!brut) return "";
+  const [email, emis] = decodeURIComponent(brut.slice(COOKIE.length + 1)).split("|");
+  if (Date.now() - Number(emis) < 864e5) return "";
+  const c = await env.DB.prepare("SELECT hash FROM comptes WHERE email = ?").bind(email).first();
+  return c && c.hash ? cookie(await jeton(env, email, c.hash)) : "";
+}
+
 function retourSur(valeur) {
   try {
     const u = new URL(valeur);
@@ -336,6 +349,11 @@ export default {
       }
       if (chemin === "/oubli/code" && requete.method === "POST") return nouveauMdp(requete, env);
       if (chemin === "/deconnexion") return rediriger("/connexion?sortie=1", { "set-cookie": cookie("", 0) });
+      // App iPhone du Suivi (voir app.js).
+      if (chemin === "/app" || chemin.startsWith("/app/")) {
+        const qui = await session(requete, env);
+        return routeApp(new Request(requete, { headers: propre }), env, qui, () => renouvellement(requete, env));
+      }
       // Logos de la marque (publics : utilises dans les mails envoyes aux clients).
       if (/^\/marque\/logo-(blanc|bleu|noir)(-480)?\.png$/.test(chemin)) {
         const r = await env.ASSETS.fetch(requete);
@@ -375,5 +393,10 @@ export default {
     propre.set("x-portail", env.SECRET_PORTAIL);
     propre.set("x-portail-email", qui);
     return outil.fetch(new Request(requete, { headers: propre }));
+  },
+
+  // Toutes les 15 minutes : bilan du matin et nouvelles demandes (app.js).
+  async scheduled(evenement, env, ctx) {
+    ctx.waitUntil(planifie(env));
   },
 };

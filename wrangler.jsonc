@@ -21,5 +21,6 @@
   "send_email": [
     { "name": "MAIL", "allowed_destination_addresses": ["bati.azur03@gmail.com"] }
   ],
+  "triggers": { "crons": ["*/15 * * * *"] },
   "observability": { "enabled": true }
 }

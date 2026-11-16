@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Suivi">
+<meta name="theme-color" content="#ffffff">
+<title>Suivi — Bati Azur</title>
+<link rel="manifest" href="/app/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/icones/suivi-180.png">
+<link rel="icon" type="image/png" href="/app/icones/suivi-192.png">
+<style>
+:root{--bleu:#4682C7;--marine:#0B3A5E;--fond:#F2F4F7;--carte:#fff;--texte:#1C1C1E;--gris:#6E6E73;--trait:#E3E6EB;
+--rouge:#E5484D;--orange:#F5A524;--vert:#30A46C;--sur:env(safe-area-inset-top);--sous:env(safe-area-inset-bottom)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--fond);color:var(--texte);font:16px/1.4 -apple-system,system-ui,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+a{color:var(--bleu);text-decoration:none}
+header{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.92);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  padding:calc(var(--sur) + 10px) 16px 10px;border-bottom:1px solid var(--trait)}
+.haut{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.haut img{height:34px;width:auto;display:block}
+.maj{font-size:12px;color:var(--gris);text-align:right}
+.rafraichir{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--fond)}
+.rafraichir.tourne svg{animation:t 1s linear infinite}@keyframes t{to{transform:rotate(360deg)}}
+.onglets{display:grid;grid-template-columns:1fr 1fr;background:#E9EBEF;border-radius:10px;padding:2px}
+.onglets button{padding:7px 0;border-radius:8px;font-weight:600;font-size:14px;color:var(--gris)}
+.onglets button.actif{background:#fff;color:var(--texte);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+main{padding:14px 14px calc(var(--sous) + 30px);max-width:640px;margin:0 auto}
+.bandeau{background:#EAF2FB;border:1px solid #CFE0F4;border-radius:14px;padding:12px 14px;margin-bottom:14px;font-size:14px;display:flex;gap:10px;align-items:center}
+.bandeau b{display:block}.bandeau button{margin-left:auto;background:var(--bleu);color:#fff;font-weight:600;padding:8px 12px;border-radius:10px;white-space:nowrap;font-size:14px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--gris);font-weight:600;margin:20px 4px 8px}
+h1{font-size:26px;margin:4px 4px 2px;letter-spacing:-.02em}.sous{color:var(--gris);margin:0 4px 6px;font-size:14px}
+.chiffres{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.chiffre{background:var(--carte);border-radius:14px;padding:12px;text-align:left}
+.chiffre b{display:block;font-size:26px;line-height:1.1}.chiffre span{font-size:12px;color:var(--gris)}
+.chiffre.rouge b{color:var(--rouge)}.chiffre.orange b{color:var(--orange)}
+.liste{background:var(--carte);border-radius:14px;overflow:hidden}
+.ligne{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--trait);width:100%;text-align:left}
+.ligne:last-child{border-bottom:0}
+.ligne .corps{flex:1;min-width:0}
+.ligne .nom{font-weight:600;display:flex;align-items:center;gap:6px}
+.ligne .det{font-size:13px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.heure{font-size:13px;color:var(--gris);white-space:nowrap;text-align:right}
+.point{width:9px;height:9px;border-radius:50%;flex:none;background:#C7CBD1}
+.point.rouge{background:var(--rouge)}.point.orange{background:var(--orange)}.point.vert{background:var(--vert)}
+.source{font-size:11px;font-weight:600;padding:2px 6px;border-radius:6px;background:#EEF1F5;color:var(--gris)}
+.actions{display:flex;gap:6px}
+.rond{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#EAF2FB;color:var(--bleu);flex:none}
+.rond.tel{background:#E6F6EE;color:var(--vert)}
+.vide{padding:22px;text-align:center;color:var(--gris);font-size:14px;background:var(--carte);border-radius:14px}
+.recherche{width:100%;font:inherit;padding:10px 12px;border-radius:12px;border:0;background:#E9EBEF;margin-bottom:10px;-webkit-appearance:none}
+.puces{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:6px;scrollbar-width:none}
+.puces::-webkit-scrollbar{display:none}
+.puces button{padding:6px 12px;border-radius:999px;background:#fff;border:1px solid var(--trait);font-size:14px;white-space:nowrap}
+.puces button.actif{background:var(--marine);border-color:var(--marine);color:#fff}
+.plus{display:block;margin:12px auto 0;color:var(--bleu);font-weight:600;padding:8px}
+/* fiche */
+.voile{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10;opacity:0;pointer-events:none;transition:opacity .2s}
+.voile.ouvert{opacity:1;pointer-events:auto}
+.fiche{position:fixed;left:0;right:0;bottom:0;z-index:11;background:var(--fond);border-radius:16px 16px 0 0;max-height:92vh;overflow-y:auto;
+  transform:translateY(100%);transition:transform .25s ease;padding:8px 14px calc(var(--sous) + 24px);max-width:640px;margin:0 auto;-webkit-overflow-scrolling:touch}
+.fiche.ouvert{transform:none}
+.poignee{width:38px;height:5px;border-radius:3px;background:#C7CBD1;margin:4px auto 10px}
+.fermer{position:absolute;right:12px;top:12px;width:30px;height:30px;border-radius:50%;background:#E3E6EB;font-size:18px;line-height:30px;color:var(--gris)}
+.gros{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.gros a,.gros button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px;border-radius:14px;background:var(--carte);font-weight:600;font-size:14px;color:var(--bleu)}
+.gros a.inactif{opacity:.35;pointer-events:none}
+.info{background:var(--carte);border-radius:14px;padding:4px 14px}
+.info div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--trait);font-size:15px}
+.info div:last-child{border-bottom:0}.info span{color:var(--gris)}.info b{font-weight:500;text-align:right;word-break:break-word}
+.mail{background:var(--carte);border-radius:14px;padding:14px;font-size:14px;white-space:pre-wrap;line-height:1.5}
+.mail .obj{font-weight:700;margin-bottom:4px;white-space:normal}.mail .quand{color:var(--gris);font-size:13px;margin-bottom:10px;white-space:normal}
+.etat{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;margin:6px 4px 0 0}
+.etat.rouge{background:#FDECEC;color:#C4282D}.etat.orange{background:#FEF4E2;color:#A86400}.etat.vert{background:#E6F6EE;color:#1E7A4D}.etat.gris{background:#EEF1F5;color:var(--gris)}
+.boutons{display:grid;gap:8px;margin-top:10px}
+.boutons button{padding:13px;border-radius:12px;background:var(--carte);font-weight:600;color:var(--bleu)}
+.boutons button.principal{background:var(--bleu);color:#fff}
+.histo{font-size:14px}.histo .ligne{padding:10px 14px}
+.toast{position:fixed;left:50%;bottom:calc(var(--sous) + 24px);transform:translate(-50%,40px);opacity:0;background:rgba(28,28,30,.92);color:#fff;
+  padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.vu{opacity:1;transform:translate(-50%,0)}
+.cache{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="haut">
+    <img src="/marque/logo-bleu-480.png" alt="Piscines Bati Azur">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="maj" id="maj"></div>
+      <button class="rafraichir" id="rafraichir" aria-label="Actualiser">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4682C7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="onglets" role="tablist">
+    <button id="o-matin" class="actif" data-vue="matin">Ce matin</button>
+    <button id="o-contacts" data-vue="contacts">Contacts</button>
+  </div>
+</header>
+
+<main>
+  <div id="bandeau"></div>
+  <section id="v-matin"></section>
+  <section id="v-contacts" class="cache">
+    <input class="recherche" id="recherche" type="search" placeholder="Rechercher un nom, une ville, un numéro…" autocomplete="off">
+    <div class="puces" id="puces"></div>
+    <div id="liste"></div>
+  </section>
+</main>
+
+<div class="voile" id="voile"></div>
+<div class="fiche" id="fiche" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/app/app.js"></script>
+</body>
+</html>
