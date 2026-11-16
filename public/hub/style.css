@@ -249,6 +249,9 @@ body {
   flex-shrink: 0;
 }
 
+.card-icon.logo { background: none; border-radius: 13px; box-shadow: 0 6px 16px rgba(11, 58, 94, 0.18); overflow: hidden; }
+.card-icon.logo img { width: 52px; height: 52px; display: block; }
+
 .card-icon svg {
   width: 26px;
   height: 26px;
@@ -517,4 +520,20 @@ footer {
     align-items: center;
     text-align: center;
   }
+}
+
+/* Couleur de chaque outil, reprise de son icône (novembre 2026). */
+.tool-card[data-outil="suivi"] { --c: #4682C7; }
+.tool-card[data-outil="mails"] { --c: #2E9CCA; }
+.tool-card[data-outil="etiquettes"] { --c: #1FA2A8; }
+.tool-card[data-outil="actus"] { --c: #5B6B7F; }
+.tool-card[data-outil="analyse"] { --c: #1F8FC4; }
+.tool-card[data-outil="pro"] { --c: #0B3A5E; }
+.tool-card[data-outil="implantation"] { --c: #2A7F62; }
+.tool-card[data-outil="terrain"] { --c: #D08A2E; }
+.tool-card[data-outil="bons"] { --c: #C9576B; }
+.tool-card[data-outil] .card-tag { color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.tool-card[data-outil] .card-cta { color: var(--c); }
+@media (prefers-color-scheme: dark) {
+  .tool-card[data-outil] .card-tag, .tool-card[data-outil] .card-cta { color: color-mix(in srgb, var(--c) 60%, white); }
 }
