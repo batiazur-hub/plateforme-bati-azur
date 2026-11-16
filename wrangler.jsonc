@@ -1,0 +1,9 @@
+{
+  // Le hub Bati Azur sur Cloudflare, a l'adresse https://batiazurpiscine.fr.
+  // Simple site statique ; l'acces est reserve par Cloudflare Access
+  // (code envoye par mail a bati.azur03@gmail.com).
+  "name": "hub-batiazur",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./", "not_found_handling": "404-page" },
+  "workers_dev": false
+}
