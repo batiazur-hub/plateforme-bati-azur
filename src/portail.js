@@ -336,6 +336,14 @@ export default {
       }
       if (chemin === "/oubli/code" && requete.method === "POST") return nouveauMdp(requete, env);
       if (chemin === "/deconnexion") return rediriger("/connexion?sortie=1", { "set-cookie": cookie("", 0) });
+      // Logos de la marque (publics : utilises dans les mails envoyes aux clients).
+      if (/^\/marque\/logo-(blanc|bleu|noir)(-480)?\.png$/.test(chemin)) {
+        const r = await env.ASSETS.fetch(requete);
+        const h = new Headers(r.headers);
+        h.set("cache-control", "public, max-age=86400");
+        h.set("access-control-allow-origin", "*");
+        return new Response(r.body, { status: r.status, headers: h });
+      }
       // Icones du hub, utilisees aussi par les pages de connexion.
       if (/^\/hub\/(favicon[^/]*|apple-touch-icon\.png|android-chrome-[^/]+\.png)$/.test(chemin))
         return env.ASSETS.fetch(requete);
