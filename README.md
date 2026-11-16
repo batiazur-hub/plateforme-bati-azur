@@ -1,22 +1,37 @@
-# Bâti Azur Hub
+# Portail et hub Bâti Azur — https://batiazurpiscine.fr
 
-Plateforme centrale pour accéder aux outils internes Bâti Azur :
+Un seul Worker Cloudflare (`hub-batiazur`) :
 
-- Admin actualités : https://batiazur-hub.github.io/batiazur-analyse/admin-actus.html
-- Générateur de mails : https://batiazur-hub.github.io/mail-generator-bati-azur/
-- Générateur d’étiquettes : https://batiazur-hub.github.io/generateur-etiquettes-bati-azur/
+- **Connexion** par adresse mail et mot de passe (`/connexion`), que Chrome
+  peut enregistrer. Mot de passe stocké en PBKDF2 (100 000 tours, sel par
+  compte) dans la base D1 `portail-batiazur`. Cinq erreurs en 15 minutes
+  bloquent l'adresse 15 minutes.
+- **Mot de passe oublié / première connexion** (`/oubli`) : un code à
+  6 chiffres part de `noreply@batiazurpiscine.fr` (Cloudflare Email
+  Routing), valable 15 minutes, cinq essais.
+- **Le hub** sous `/hub/` (fichiers dans `public/hub/`).
+- **La garde des outils** : `suivi.`, `pro.`, `bons.`, `implantation.`
+  sont rattachés à ce Worker, qui vérifie la session puis transmet la requête
+  à l'outil par liaison de service, avec l'en-tête `x-portail`.
+  Restent ouverts sans session : les liens de confirmation des clients
+  (`suivi…/c/…`) et les routes du robot (`/api/depot`, `/api/repondu`,
+  `/api/courrier…`, protégées par leur jeton).
 
-## Installation GitHub Pages
+La session (cookie `portail`, 30 jours) vaut pour le domaine et ses
+sous-domaines. Changer de mot de passe déconnecte tous les appareils.
 
-1. Créer un dépôt GitHub, idéalement `batiazur-hub.github.io` pour publier à la racine.
-2. Envoyer tous les fichiers du dossier à la racine du dépôt.
-3. Aller dans `Settings` → `Pages`.
-4. Choisir `Deploy from branch` → branche `main` → dossier `/root`.
-5. Attendre le déploiement.
+`index.html` à la racine ne sert qu'à rediriger l'ancienne adresse GitHub
+Pages vers le nouveau hub.
 
-## Fichiers importants
+## Déployer
 
-- `index.html` : page principale du Hub.
-- `style.css` : design de la plateforme.
-- `app.js` : bouton de copie de l’adresse.
-- `site.webmanifest` + icônes : installation façon application sur mobile.
+    npx wrangler deploy
+
+Secrets : `SECRET_SESSION` (sessions et codes), `SECRET_PORTAIL` (le même
+que sur `suivi-clients`). Ajouter un compte :
+
+    npx wrangler d1 execute portail-batiazur --remote --command "INSERT INTO comptes (email) VALUES ('adresse@exemple.fr')"
+
+puis passer par « Mot de passe oublié » pour choisir son mot de passe. Pour
+envoyer le code à une nouvelle adresse, l'ajouter à
+`allowed_destination_addresses` et la vérifier dans Email Routing.

@@ -1,9 +1,25 @@
 {
-  // Le hub Bati Azur sur Cloudflare, a l'adresse https://batiazurpiscine.fr.
-  // Simple site statique ; l'acces est reserve par Cloudflare Access
-  // (code envoye par mail a bati.azur03@gmail.com).
+  // Portail Bati Azur : https://batiazurpiscine.fr
+  //  - pages de connexion (mot de passe, mot de passe oublie par code mail) ;
+  //  - le hub, sous /hub ;
+  //  - la garde devant les outils internes (sous-domaines), qui recoivent les
+  //    requetes par liaison de service une fois la session verifiee.
   "name": "hub-batiazur",
+  "main": "src/portail.js",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./", "not_found_handling": "404-page" },
-  "workers_dev": false
+  "workers_dev": false,
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "portail-batiazur", "database_id": "df64c1b1-6fad-4ad7-b39a-5b95dc6750e5" }
+  ],
+  "services": [
+    { "binding": "SUIVI", "service": "suivi-clients" },
+    { "binding": "PRO", "service": "batiazuranalysepro" },
+    { "binding": "BONS", "service": "dashing-torrone" },
+    { "binding": "IMPLANTATION", "service": "implatationpiscine" }
+  ],
+  "send_email": [
+    { "name": "MAIL", "allowed_destination_addresses": ["bati.azur03@gmail.com"] }
+  ],
+  "observability": { "enabled": true }
 }
