@@ -125,6 +125,7 @@ function iconesBatiAzur(reponse) {
       `<link rel="icon" type="image/png" sizes="32x32" href="/__bati/icone-32.png${v}">` +
       `<link rel="icon" type="image/png" sizes="192x192" href="/__bati/icone-192.png${v}">` +
       `<link rel="apple-touch-icon" sizes="180x180" href="/__bati/icone-180.png${v}">`, { html: true }) })
+    .on("body", { element: e => e.append(`<script src="https://${DOMAINE}/lanceur.js" defer></script>`, { html: true }) })
     .transform(reponse);
 }
 
@@ -367,6 +368,15 @@ export default {
       if (chemin === "/app" || chemin.startsWith("/app/")) {
         const qui = await session(requete, env);
         return routeApp(new Request(requete, { headers: propre }), env, qui, () => renouvellement(requete, env));
+      }
+      // Lanceur des outils (bouton a 4 points) et ses icones : publics, ils
+      // sont charges depuis les outils heberges ailleurs (GitHub, Terrain).
+      if (chemin === "/lanceur.js" || /^\/icones-outils\/png\/[a-z]+-\d+\.png$/.test(chemin)) {
+        const r = await env.ASSETS.fetch(requete);
+        const h = new Headers(r.headers);
+        h.set("cache-control", chemin.endsWith(".js") ? "public, max-age=3600" : "public, max-age=604800");
+        h.set("access-control-allow-origin", "*");
+        return new Response(r.body, { status: r.status, headers: h });
       }
       // Logos de la marque (publics : utilises dans les mails envoyes aux clients).
       if (/^\/marque\/logo-(blanc|bleu|noir)(-480)?\.png$/.test(chemin)) {

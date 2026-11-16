@@ -29,13 +29,16 @@
 
     <header class="topbar">
       <div class="brand">
-        <img src="./apple-touch-icon.png" alt="Bâti Azur Hub" class="brand-icon" />
+        <img src="./apple-touch-icon.png?v=2" alt="Bâti Azur Hub" class="brand-icon" />
         <div>
           <div class="brand-name">Bâti Azur Hub</div>
           <div class="brand-sub">Plateforme interne</div>
         </div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px">
+      <span data-lanceur-bati></span>
       <a class="version-badge" href="/deconnexion" title="Se déconnecter du hub et des outils">Se déconnecter</a>
+      </div>
     </header>
 
     <section class="hero">
@@ -179,5 +182,6 @@
   </main>
 
   <script src="./app.js"></script>
+<script src="/lanceur.js" defer></script>
 </body>
 </html>
