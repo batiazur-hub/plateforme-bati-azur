@@ -114,6 +114,20 @@ async function renouvellement(requete, env) {
   return c && c.hash ? cookie(await jeton(env, email, c.hash)) : "";
 }
 
+/** Remplace les icones d'une page d'outil par celles de Bati Azur : une
+ *  seule famille d'icones pour tous les outils, sans toucher a leur code. */
+function iconesBatiAzur(reponse) {
+  if (!(reponse.headers.get("content-type") || "").includes("text/html")) return reponse;
+  const v = "?v=2";
+  return new HTMLRewriter()
+    .on('link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]', { element: e => e.remove() })
+    .on("head", { element: e => e.append(
+      `<link rel="icon" type="image/png" sizes="32x32" href="/__bati/icone-32.png${v}">` +
+      `<link rel="icon" type="image/png" sizes="192x192" href="/__bati/icone-192.png${v}">` +
+      `<link rel="apple-touch-icon" sizes="180x180" href="/__bati/icone-180.png${v}">`, { html: true }) })
+    .transform(reponse);
+}
+
 function retourSur(valeur) {
   try {
     const u = new URL(valeur);
@@ -378,6 +392,17 @@ export default {
     const outil = env[OUTILS[sous]];
     if (!outil) return new Response("Introuvable", { status: 404 });
 
+    // Icones Bati Azur de l'outil (novembre 2026), servies par le portail.
+    const icone = chemin.match(/^\/__bati\/icone-(32|180|192|512)\.png$/);
+    if (icone) {
+      const r = await env.ASSETS.fetch(new Request(`https://${DOMAINE}/icones-outils/png/${sous}-${icone[1]}.png`));
+      return new Response(r.body, { status: r.status, headers: { "content-type": "image/png", "cache-control": "public, max-age=604800" } });
+    }
+    if (/^\/(favicon\.ico|apple-touch-icon(-precomposed)?\.png)$/.test(chemin)) {
+      const r = await env.ASSETS.fetch(new Request(`https://${DOMAINE}/icones-outils/png/${sous}-${chemin.includes("apple") ? 180 : 32}.png`));
+      return new Response(r.body, { status: r.status, headers: { "content-type": "image/png", "cache-control": "public, max-age=604800" } });
+    }
+
     if ((OUVERT[sous] || []).some(r => r.test(chemin)))
       return outil.fetch(new Request(requete, { headers: propre }));
 
@@ -392,7 +417,7 @@ export default {
     }
     propre.set("x-portail", env.SECRET_PORTAIL);
     propre.set("x-portail-email", qui);
-    return outil.fetch(new Request(requete, { headers: propre }));
+    return iconesBatiAzur(await outil.fetch(new Request(requete, { headers: propre })));
   },
 
   // Toutes les 15 minutes : bilan du matin et nouvelles demandes (app.js).
