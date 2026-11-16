@@ -169,7 +169,7 @@ function page(titre, contenu, statut = 200, extra = {}) {
   return new Response(`<!doctype html><html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>${echapper(titre)} — Bâti Azur</title>
-<link rel="icon" href="/hub/favicon-32x32.png"><link rel="apple-touch-icon" href="/hub/apple-touch-icon.png">
+<link rel="icon" href="/hub/favicon-32x32.png?v=2"><link rel="apple-touch-icon" href="/hub/apple-touch-icon.png?v=2">
 <style>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
@@ -191,7 +191,7 @@ button{width:100%;margin-top:20px;padding:14px;font:inherit;font-size:16px;font-
 .info{background:#eef6ff;color:#0F4FA3;border-radius:10px;padding:10px 12px;font-size:14px;margin:0 0 6px}
 .aide{font-size:12.5px;color:#6e6e73;margin-top:6px}
 </style></head><body><main class="carte">
-<div class="marque"><img src="/hub/apple-touch-icon.png" alt=""><div><b>Bâti Azur Hub</b><span>Plateforme interne</span></div></div>
+<div class="marque"><img src="/hub/apple-touch-icon.png?v=2" alt=""><div><b>Bâti Azur Hub</b><span>Plateforme interne</span></div></div>
 ${contenu}</main></body></html>`, { status: statut, headers: { ...ENTETES, ...extra } });
 }
 
