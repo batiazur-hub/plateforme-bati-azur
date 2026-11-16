@@ -4,8 +4,13 @@
 const $ = s => document.querySelector(s);
 const ech = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const SOURCES = { aboral: "Aboral", site: "Site", magasin: "Magasin" };
-const APPELS = ["appel_repondu", "appel_sans_reponse", "rdv", "devis"];
-const GENRES = { appel_sans_reponse: "Appelé, pas de réponse", appel_repondu: "Appelé", rdv: "Rendez-vous", devis: "Devis envoyé", note: "Note" };
+const APPELS = ["appel_repondu", "appel_sans_reponse", "rdv", "devis", "mail"];
+const GENRES = { appel_sans_reponse: "Appelé, pas de réponse", appel_repondu: "Appelé", mail: "Contacté par mail",
+                 rdv: "Rendez-vous", devis: "Devis envoyé", note: "Note" };
+// Ce qu'on peut noter depuis le téléphone, et le délai de rappel proposé (jours).
+const NOTER = [["appel_repondu", "Appelé", 0], ["appel_sans_reponse", "Pas de réponse", 2], ["mail", "Contacté par mail", 3],
+               ["rdv", "Rendez-vous", 1], ["devis", "Devis envoyé", 7]];
+const dansJours = j => { const d = new Date(); d.setDate(d.getDate() + j); return d.toLocaleDateString("sv-SE"); };
 const CRENEAUX = { matin: "le matin", midi: "entre 12 h et 14 h", apres_midi: "l'après-midi", soir: "en fin de journée" };
 
 const etat = {
@@ -122,6 +127,7 @@ function rendreMatin() {
       <button class="chiffre ${rouges.length ? "rouge" : ""}" data-filtre="rouge"><b>${rouges.length}</b><span>à appeler</span></button>
       <button class="chiffre ${oranges.length ? "orange" : ""}" data-filtre="orange"><b>${oranges.length}</b><span>sans confirmation</span></button>
     </div>
+    ${nouvelles(m, parId)}
     <h2 style="display:flex;justify-content:space-between;align-items:center">Mails envoyés
       <span class="puces" style="margin:0;padding:0">${periodes.map(([j, t]) =>
         `<button data-periode="${j}" class="${etat.periode === j ? "actif" : ""}" style="padding:3px 9px;font-size:12px">${t}</button>`).join("")}</span></h2>`;
@@ -139,6 +145,24 @@ function rendreMatin() {
     if (rouges.length > 8) h += `<button class="plus" data-filtre="rouge">Voir les ${rouges.length - 8} autres</button>`;
   }
   $("#v-matin").innerHTML = h;
+}
+
+/** Demandes reçues sur la période : le client a-t-il été informé ? */
+function nouvelles(m, parId) {
+  const nv = m.nouveaux || [];
+  if (!nv.length) return "";
+  const informes = nv.filter(c => c.repondu || c.mail_envoye).length;
+  return `<h2>Demandes reçues · ${informes}/${nv.length} informée${informes > 1 ? "s" : ""} par mail</h2>
+    <div class="liste">${nv.map(n => {
+      const c = parId.get(n.id) || n;
+      const info = n.confirme ? `<span style="color:var(--vert)">✓ mail reçu, confirmé</span>`
+        : (n.repondu || n.mail_envoye) ? "✓ informé par mail"
+        : `<span style="color:var(--rouge)">✗ pas de mail automatique</span>`;
+      return `<div class="ligne" data-id="${n.id}" role="button">
+        <span class="point ${couleur(c)}"></span>
+        <div class="corps"><div class="nom">${ech(n.nom || n.email || "Sans nom")} <span class="source">${ech(SOURCES[n.source] || n.source)}</span></div>
+          <div class="det">${info} · ${ech([n.ville, n.projet].filter(Boolean).join(" · "))}</div></div>
+        ${boutonsContact(c)}</div>`; }).join("")}</div>`;
 }
 
 function ligneContact(c) {
@@ -221,11 +245,19 @@ function ouvrir(id) {
       <div class="nom" style="font-weight:500">${ech(GENRES[e.genre] || e.genre)}</div>${e.detail ? `<div class="det" style="white-space:normal">${ech(e.detail)}</div>` : ""}</div>
       <div class="heure">${ech(dateCourte(e.quand))}${e.heure ? "<br>" + ech(e.heure) : ""}</div></div>`).join("")}</div>`;
   }
-  h += `<h2>Noter</h2><div class="boutons">
-    <button class="principal" data-ev="appel_repondu">J'ai eu le client au téléphone</button>
-    <button data-ev="appel_sans_reponse">Appelé, pas de réponse</button>
-    <button data-statut="${c.statut === "traite" ? "a_traiter" : "traite"}">${c.statut === "traite" ? "Remettre à traiter" : "Marquer comme traité"}</button>
-  </div>`;
+  h += `<h2>Noter un contact</h2>
+    <div class="info noter">
+      <div class="puces" style="margin:10px 0 4px;flex-wrap:wrap">${NOTER.map(([g, t], i) =>
+        `<button type="button" data-genre="${g}" data-delai="${NOTER[i][2]}" class="${i === 0 ? "actif" : ""}">${t}</button>`).join("")}</div>
+      <div><span>Le</span><b><input type="date" id="n-quand" value="${aujourdhui()}"></b></div>
+      <div><span>Recontacter le</span><b><input type="date" id="n-relance" value=""></b></div>
+      <div style="display:block"><input type="text" id="n-detail" placeholder="Précision (facultatif)" class="champ"></div>
+    </div>
+    <div class="boutons">
+      <button class="principal" data-enregistrer>Enregistrer</button>
+      <button data-statut="${c.statut === "traite" ? "a_traiter" : "traite"}">${c.statut === "traite" ? "Remettre à traiter" : "Marquer comme traité"}</button>
+      <button data-supprimer style="color:var(--rouge)">Supprimer ce contact</button>
+    </div>`;
   const f = $("#fiche"); f.innerHTML = h; f.dataset.id = id; f.scrollTop = 0;
   f.classList.add("ouvert"); $("#voile").classList.add("ouvert");
 }
@@ -235,12 +267,26 @@ function fermer() {
   history.replaceState(null, "", "#" + etat.vue);
 }
 
-async function noter(id, genre) {
+async function noter(id) {
+  const f = $("#fiche");
+  const genre = f.querySelector(".noter .puces .actif")?.dataset.genre || "appel_repondu";
+  const quand = $("#n-quand").value || aujourdhui();
+  const relance = $("#n-relance").value || null;          // vide : pas de rappel prévu
   try {
-    const r = await api(`/contacts/${id}/evenement`, { method: "POST", body: JSON.stringify({ genre, quand: aujourdhui(),
-      heure: new Date().toTimeString().slice(0, 5) }) });
+    const r = await api(`/contacts/${id}/evenement`, { method: "POST", body: JSON.stringify({ genre, quand,
+      heure: quand === aujourdhui() ? new Date().toTimeString().slice(0, 5) : "", detail: $("#n-detail").value, relance }) });
     if (r.contacts) etat.contacts = r.contacts;
     toast("C'est noté."); rendre(); ouvrir(id);
+  } catch (e) { toast("Échec : " + e.message); }
+}
+
+async function supprimer(id) {
+  const c = etat.contacts.find(x => x.id === id);
+  if (!confirm(`Supprimer définitivement ${c?.nom || c?.email || "ce contact"} et son historique ?`)) return;
+  try {
+    const r = await api(`/contacts/${id}`, { method: "DELETE" });
+    etat.contacts = r.contacts || etat.contacts.filter(x => x.id !== id);
+    fermer(); toast("Contact supprimé."); rendre();
   } catch (e) { toast("Échec : " + e.message); }
 }
 
@@ -326,7 +372,14 @@ document.addEventListener("click", e => {
   if (t.id === "essai") return essai();
   if (t.dataset.fermer !== undefined) return fermer();
   const id = Number($("#fiche").dataset.id);
-  if (t.dataset.ev) return noter(id, t.dataset.ev);
+  if (t.dataset.genre) {                       // type de contact : propose la date de rappel
+    t.parentNode.querySelectorAll("button").forEach(b => b.classList.toggle("actif", b === t));
+    const j = Number(t.dataset.delai);
+    $("#n-relance").value = j ? dansJours(j) : "";
+    return;
+  }
+  if (t.dataset.enregistrer !== undefined) return noter(id);
+  if (t.dataset.supprimer !== undefined) return supprimer(id);
   if (t.dataset.statut) return changerStatut(id, t.dataset.statut);
   if (t.dataset.id) return ouvrir(Number(t.dataset.id));
 });

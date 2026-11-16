@@ -45,10 +45,11 @@
 .flotte .btn:hover,.flotte .btn[aria-expanded=true]{background:#fff}
 .points{display:grid;grid-template-columns:repeat(2,6px);gap:4px}
 .points i{width:6px;height:6px;border-radius:50%;background:currentColor;display:block}
-.panneau{position:fixed;z-index:2147483647;width:316px;max-width:calc(100vw - 16px);max-height:calc(100vh - 80px);overflow:auto;
+.panneau{position:fixed;top:0;left:0;visibility:hidden;z-index:2147483647;width:316px;max-width:calc(100vw - 16px);max-height:calc(100vh - 80px);overflow:auto;
   background:#fff;border-radius:22px;padding:14px 10px 10px;box-shadow:0 2px 6px rgba(0,0,0,.15),0 12px 36px rgba(0,0,0,.18);
-  opacity:0;transform:translateY(-6px) scale(.98);transform-origin:top right;pointer-events:none;transition:opacity .14s,transform .14s}
-.panneau.ouvert{opacity:1;transform:none;pointer-events:auto}
+  opacity:0;transform:translateY(-6px) scale(.98);transform-origin:top right;pointer-events:none;transition:opacity .14s,transform .14s,visibility 0s .14s}
+.panneau.ouvert{transition:opacity .14s,transform .14s}
+.panneau.ouvert{opacity:1;transform:none;pointer-events:auto;visibility:visible}
 .titre{font-size:12px;font-weight:600;color:#5f6368;letter-spacing:.03em;text-transform:uppercase;margin:0 8px 8px}
 .grille{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
 a.outil{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px 10px;border-radius:14px;text-decoration:none;

@@ -23,6 +23,7 @@ const API = [
   /^\/api\/contacts$/,
   /^\/api\/matin$/,
   /^\/api\/contacts\/\d+\/(statut|evenement|notes|relance)$/,
+  /^\/api\/contacts\/\d+$/,                 // DELETE : supprimer une demande sans suite
 ];
 
 // Fichiers lisibles sans session : iOS les charge hors de la page.
@@ -95,21 +96,36 @@ const nomCourt = c => (c.nom || c.email || "Sans nom").trim();
 const liste = (noms, max = 4) =>
   noms.length <= max ? noms.join(", ") : `${noms.slice(0, max).join(", ")} et ${noms.length - max} autre${noms.length - max > 1 ? "s" : ""}`;
 
-/** Le bilan du matin : mails partis depuis la veille, ce qui reste a faire. */
+/** Le bilan du matin : les demandes arrivees depuis le dernier bilan, si
+ *  les clients ont ete informes par le mail automatique, et ce qui reste a
+ *  faire dans la journee. */
 async function bilan(env, depuis) {
   const r = await suivi(env, `/api/matin?depuis=${encodeURIComponent(depuis)}`);
   if (!r.ok) throw new Error(`suivi ${r.status}`);
   const m = await r.json();
-  const n = m.envoyes.length;
+  const nv = m.nouveaux;
   const lignes = [];
-  lignes.push(n ? `${n} mail${n > 1 ? "s" : ""} parti${n > 1 ? "s" : ""} : ${liste(m.envoyes.map(nomCourt))}.`
-                : "Aucun mail automatique parti cette nuit.");
-  const alertes = [];
-  if (m.sans_appel) alertes.push(`${m.sans_appel} à appeler (plus de 48 h)`);
-  if (m.non_confirmes) alertes.push(`${m.non_confirmes} sans confirmation`);
-  lignes.push(alertes.length ? alertes.join(" · ") + "." : `${m.a_traiter} demande${m.a_traiter > 1 ? "s" : ""} à traiter.`);
-  return { titre: "Bilan du matin — Suivi Bati Azur", corps: lignes.join("\n"), url: "/app/#matin", sujet: "bilan",
-           dernier_id: m.dernier_id };
+  let titre;
+  if (!nv.length) {
+    titre = "Bilan du matin — aucune nouvelle demande";
+  } else {
+    titre = `Bilan du matin — ${nv.length} nouvelle${nv.length > 1 ? "s" : ""} demande${nv.length > 1 ? "s" : ""}`;
+    lignes.push(liste(nv.map(nomCourt)) + ".");
+    const informes = nv.filter(c => c.repondu || c.mail_envoye);
+    const sansMail = nv.filter(c => !(c.repondu || c.mail_envoye));
+    const confirmes = nv.filter(c => c.confirme).length;
+    let info = informes.length === nv.length
+      ? (nv.length > 1 ? "Toutes informées par mail" : "Informée par mail")
+      : `${informes.length}/${nv.length} informée${informes.length > 1 ? "s" : ""} par mail — sans mail : ${liste(sansMail.map(nomCourt), 3)}`;
+    if (confirmes) info += ` (${confirmes} confirmation${confirmes > 1 ? "s" : ""} de réception)`;
+    lignes.push(info + ".");
+  }
+  const afaire = [];
+  if (m.sans_appel) afaire.push(`${m.sans_appel} à appeler (+ 48 h)`);
+  if (m.non_confirmes) afaire.push(`${m.non_confirmes} sans confirmation`);
+  if (m.rappels) afaire.push(`${m.rappels} rappel${m.rappels > 1 ? "s" : ""} prévu${m.rappels > 1 ? "s" : ""}`);
+  lignes.push(afaire.length ? "À faire : " + afaire.join(", ") + "." : `${m.a_traiter} demande${m.a_traiter > 1 ? "s" : ""} en cours, rien d'urgent.`);
+  return { titre, corps: lignes.join("\n"), url: "/app/#matin", sujet: "bilan", dernier_id: m.dernier_id };
 }
 
 /** Tache planifiee, toutes les 15 minutes. */

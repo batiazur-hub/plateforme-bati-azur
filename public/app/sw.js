@@ -1,5 +1,5 @@
 // Service worker de l'app Suivi : notifications, et l'app s'ouvre meme sans reseau.
-const CACHE = "suivi-v1";
+const CACHE = "suivi-v2";
 const COQUILLE = ["/app/", "/app/app.js", "/app/manifest.webmanifest", "/app/icones/suivi-192.png", "/marque/logo-bleu-480.png"];
 
 self.addEventListener("install", e => {

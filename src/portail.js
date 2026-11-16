@@ -398,6 +398,25 @@ export default {
       return new Response(r.body, { status: r.status, headers: h });
     }
 
+    // Analyse piscine : publique (clients). Relais tel quel, sauf les icones.
+    if (hote === `analyse.${DOMAINE}`) {
+      const ICONES_ANALYSE = {
+        "/favicon.ico": ["analyse.ico", "image/x-icon"],
+        "/favicon.svg": ["analyse.svg", "image/svg+xml"],
+        "/favicon-16x16.png": ["analyse-16.png", "image/png"],
+        "/favicon-32x32.png": ["analyse-32.png", "image/png"],
+        "/apple-touch-icon.png": ["analyse-180.png", "image/png"],
+        "/android-chrome-192x192.png": ["analyse-192.png", "image/png"],
+        "/android-chrome-512x512.png": ["analyse-512.png", "image/png"],
+      };
+      const ic = ICONES_ANALYSE[chemin];
+      if (ic) {
+        const r = await env.ASSETS.fetch(new Request(`https://${DOMAINE}/icones-outils/png/${ic[0]}`));
+        return new Response(r.body, { status: r.status, headers: { "content-type": ic[1], "cache-control": "public, max-age=86400" } });
+      }
+      return env.ANALYSE.fetch(requete);
+    }
+
     const sous = hote.endsWith("." + DOMAINE) ? hote.slice(0, -DOMAINE.length - 1) : "";
     const outil = env[OUTILS[sous]];
     if (!outil) return new Response("Introuvable", { status: 404 });
