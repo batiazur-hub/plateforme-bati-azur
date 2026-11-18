@@ -85,6 +85,12 @@ h1{font-size:26px;margin:4px 4px 2px;letter-spacing:-.02em}.sous{color:var(--gri
 .noter .champ{width:100%;font:inherit;font-size:15px;border:0;background:#EEF1F5;border-radius:10px;padding:10px 12px;margin:2px 0 10px;-webkit-appearance:none}
 .noter .puces{justify-content:flex-start;gap:6px}
 .noter .puces button{font-size:13px;padding:6px 11px}
+.gros .inactif{opacity:.35;pointer-events:none}
+.gros button{border:0;cursor:pointer;font:inherit;font-weight:600;font-size:14px}
+a.ligne{color:inherit;text-decoration:none}
+.fil-ic{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:14px;background:#EEF1F5;color:var(--gris)}
+.fil-ic.envoye{background:#E6F0FB;color:var(--bleu)}.fil-ic.recu{background:#E6F6EE;color:#1E7A4D}
+.fil-x{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .toast{position:fixed;left:50%;bottom:calc(var(--sous) + 24px);transform:translate(-50%,40px);opacity:0;background:rgba(28,28,30,.92);color:#fff;
   padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
 .toast.vu{opacity:1;transform:translate(-50%,0)}
@@ -123,6 +129,7 @@ h1{font-size:26px;margin:4px 4px 2px;letter-spacing:-.02em}.sous{color:var(--gri
 <div class="fiche" id="fiche" role="dialog" aria-modal="true"></div>
 <div class="toast" id="toast"></div>
 
+<script src="/modeles-mail.js"></script>
 <script src="/app/app.js"></script>
 <script src="/lanceur.js" defer></script>
 </body>

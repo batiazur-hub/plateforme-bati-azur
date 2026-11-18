@@ -26,7 +26,7 @@ const OUTILS = { suivi: "SUIVI", pro: "PRO", bons: "BONS", implantation: "IMPLAN
 // Ce qui reste ouvert sans session : les liens de confirmation envoyes aux
 // clients, et les routes du robot (protegees par leur propre jeton).
 const OUVERT = {
-  suivi: [/^\/c\/[0-9a-f]{32}$/, /^\/api\/depot$/, /^\/api\/repondu$/, /^\/api\/courrier(\/.*)?$/],
+  suivi: [/^\/c\/[0-9a-f]{32}$/, /^\/api\/depot$/, /^\/api\/repondu$/, /^\/api\/echanges$/, /^\/api\/courrier(\/.*)?$/],
 };
 
 /* ---------------------------------------------------------------- outils */
@@ -371,7 +371,7 @@ export default {
       }
       // Lanceur des outils (bouton a 4 points) et ses icones : publics, ils
       // sont charges depuis les outils heberges ailleurs (GitHub, Terrain).
-      if (chemin === "/lanceur.js" || /^\/icones-outils\/png\/[a-z]+-\d+\.png$/.test(chemin)) {
+      if (chemin === "/lanceur.js" || chemin === "/modeles-mail.js" || /^\/icones-outils\/png\/[a-z]+-\d+\.png$/.test(chemin)) {
         const r = await env.ASSETS.fetch(requete);
         const h = new Headers(r.headers);
         h.set("cache-control", chemin.endsWith(".js") ? "public, max-age=3600" : "public, max-age=604800");

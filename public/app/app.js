@@ -5,10 +5,10 @@ const $ = s => document.querySelector(s);
 const ech = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const SOURCES = { aboral: "Aboral", site: "Site", magasin: "Magasin" };
 const APPELS = ["appel_repondu", "appel_sans_reponse", "rdv", "devis", "mail"];
-const GENRES = { appel_sans_reponse: "Appelé, pas de réponse", appel_repondu: "Appelé", mail: "Contacté par mail",
+const GENRES = { appel_sans_reponse: "Appelé, pas de réponse", appel_repondu: "Appelé", mail: "Mail envoyé",
                  rdv: "Rendez-vous", devis: "Devis envoyé", note: "Note" };
 // Ce qu'on peut noter depuis le téléphone, et le délai de rappel proposé (jours).
-const NOTER = [["appel_repondu", "Appelé", 0], ["appel_sans_reponse", "Pas de réponse", 2], ["mail", "Contacté par mail", 3],
+const NOTER = [["appel_repondu", "Appelé", 0], ["appel_sans_reponse", "Pas de réponse", 2], ["mail", "Mail envoyé", 3],
                ["rdv", "Rendez-vous", 1], ["devis", "Devis envoyé", 7]];
 const dansJours = j => { const d = new Date(); d.setDate(d.getDate() + j); return d.toLocaleDateString("sv-SE"); };
 const CRENEAUX = { matin: "le matin", midi: "entre 12 h et 14 h", apres_midi: "l'après-midi", soir: "en fin de journée" };
@@ -128,6 +128,10 @@ function rendreMatin() {
       <button class="chiffre ${oranges.length ? "orange" : ""}" data-filtre="orange"><b>${oranges.length}</b><span>sans confirmation</span></button>
     </div>
     ${nouvelles(m, parId)}
+    ${(m.recus || []).length ? `<h2>Réponses de clients</h2><div class="liste">${m.recus.map(r => `<div class="ligne" data-id="${r.id}" role="button">
+      <span class="fil-ic recu">↙</span><div class="corps"><div class="nom">${ech(r.nom || r.email)}</div>
+      <div class="det">${ech(r.sujet || "")}${r.extrait ? " — " + ech(r.extrait) : ""}</div></div>
+      <div class="heure">${ech(dateCourte(r.quand))}<br><b style="color:var(--texte)">${heure(r.quand)}</b></div></div>`).join("")}</div>` : ""}
     <h2 style="display:flex;justify-content:space-between;align-items:center">Mails envoyés
       <span class="puces" style="margin:0;padding:0">${periodes.map(([j, t]) =>
         `<button data-periode="${j}" class="${etat.periode === j ? "actif" : ""}" style="padding:3px 9px;font-size:12px">${t}</button>`).join("")}</span></h2>`;
@@ -152,12 +156,12 @@ function nouvelles(m, parId) {
   const nv = m.nouveaux || [];
   if (!nv.length) return "";
   const informes = nv.filter(c => c.repondu || c.mail_envoye).length;
-  return `<h2>Demandes reçues · ${informes}/${nv.length} informée${informes > 1 ? "s" : ""} par mail</h2>
+  return `<h2>Demandes reçues · ${informes}/${nv.length} contactée${informes > 1 ? "s" : ""} par mail</h2>
     <div class="liste">${nv.map(n => {
       const c = parId.get(n.id) || n;
       const info = n.confirme ? `<span style="color:var(--vert)">✓ mail reçu, confirmé</span>`
-        : (n.repondu || n.mail_envoye) ? "✓ informé par mail"
-        : `<span style="color:var(--rouge)">✗ pas de mail automatique</span>`;
+        : (n.repondu || n.mail_envoye) ? "✓ mail envoyé"
+        : `<span style="color:var(--rouge)">✗ pas encore de mail</span>`;
       return `<div class="ligne" data-id="${n.id}" role="button">
         <span class="point ${couleur(c)}"></span>
         <div class="corps"><div class="nom">${ech(n.nom || n.email || "Sans nom")} <span class="source">${ech(SOURCES[n.source] || n.source)}</span></div>
@@ -224,27 +228,16 @@ function ouvrir(id) {
     <div>${etiquetteEtat(c)}</div>
     <div class="gros">
       <a href="${telLien(c.telephone)}" class="${c.telephone ? "" : "inactif"}">${icTel}Appeler</a>
-      <a href="mailto:${ech(c.email)}" class="${c.email ? "" : "inactif"}">${icMail}Écrire</a>
+      <button data-ecrire class="${c.email ? "" : "inactif"}">${icMail}Envoyer un mail</button>
     </div>
+    <div id="ecrire" class="cache"></div>
     <div class="info">${lignes.map(([k, v, brut]) => `<div><span>${k}</span><b>${brut ? v : ech(v)}</b></div>`).join("")}</div>`;
   if (c.confirme || c.creneau || c.message_client) {
     h += `<h2>Réponse du client</h2><div class="mail">${c.confirme ? `<div class="quand">Réception confirmée ${ech(quandEnvoi(c.confirme))}</div>` : ""}${
       c.creneau ? `Préfère être rappelé ${ech(CRENEAUX[c.creneau] || c.creneau)}.\n` : ""}${ech(c.message_client)}</div>`;
   }
-  h += `<h2>Mail automatique</h2>`;
-  if (c.mail_envoye || c.repondu) {
-    h += `<div class="mail"><div class="obj">${ech(c.mail_sujet || "Votre demande de devis piscine — Bati Azur")}</div>
-      <div class="quand">Parti ${c.mail_envoye ? ech(quandEnvoi(c.mail_envoye)) : ech(dateCourte(c.repondu))} à ${ech(c.email)}</div>${
-      c.mail_texte ? ech(c.mail_texte) : `<span style="color:var(--gris)">Le contenu n'est enregistré que pour les mails partis depuis le 17 novembre 2026.</span>`}</div>`;
-  } else {
-    h += `<div class="vide">Aucun mail automatique envoyé à ce contact.</div>`;
-  }
   if (c.notes) h += `<h2>Notes</h2><div class="mail">${ech(c.notes)}</div>`;
-  if ((c.evenements || []).length) {
-    h += `<h2>Historique</h2><div class="liste histo">${c.evenements.map(e => `<div class="ligne"><div class="corps">
-      <div class="nom" style="font-weight:500">${ech(GENRES[e.genre] || e.genre)}</div>${e.detail ? `<div class="det" style="white-space:normal">${ech(e.detail)}</div>` : ""}</div>
-      <div class="heure">${ech(dateCourte(e.quand))}${e.heure ? "<br>" + ech(e.heure) : ""}</div></div>`).join("")}</div>`;
-  }
+  h += historique(c);
   h += `<h2>Noter un contact</h2>
     <div class="info noter">
       <div class="puces" style="margin:10px 0 4px;flex-wrap:wrap">${NOTER.map(([g, t], i) =>
@@ -260,6 +253,46 @@ function ouvrir(id) {
     </div>`;
   const f = $("#fiche"); f.innerHTML = h; f.dataset.id = id; f.scrollTop = 0;
   f.classList.add("ouvert"); $("#voile").classList.add("ouvert");
+}
+
+/** Le fil complet d'un client : mails envoyés et reçus (relevés dans Gmail
+ *  toutes les 30 min), actions notées, demande et confirmation. */
+function historique(c) {
+  const l = [{ quand: c.recu + "T08:00:00Z", ic: "★", t: "Demande reçue", x: [SOURCES[c.source] || c.source, c.projet].filter(Boolean).join(" · ") }];
+  for (const m of c.echanges || [])
+    l.push({ quand: m.quand, ic: m.sens === "recu" ? "↙" : "↗", cl: m.sens,
+             t: (m.sens === "recu" ? "Mail reçu" : "Mail envoyé") + (m.sujet ? " — " + m.sujet : ""),
+             x: m.extrait + (m.pieces ? ` 📎 ${m.pieces}` : ""), lien: m.fil && window.BatiMails ? BatiMails.filGmail(m.fil) : "",
+             heure: true });
+  for (const e of c.evenements || [])
+    l.push({ quand: e.quand + "T" + (e.heure || "12:00") + ":00", ic: { mail: "✉", rdv: "◷", devis: "€", note: "✎" }[e.genre] || "✆",
+             t: (GENRES[e.genre] || e.genre) + (e.heure ? " à " + e.heure : ""), x: e.detail || "" });
+  if (c.confirme) l.push({ quand: c.confirme, ic: "✓", cl: "recu", t: "Réception confirmée par le client", x: c.message_client || "" });
+  l.sort((a, b) => (a.quand < b.quand ? 1 : -1));
+  const ligne = e => {
+    const d = new Date(e.quand);
+    const date = isNaN(d) ? "" : d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + (e.heure ? " " + heure(e.quand) : "");
+    const inner = `<span class="fil-ic ${e.cl || ""}">${e.ic}</span><div class="corps"><div class="nom" style="font-weight:600;font-size:14px">${ech(e.t)}</div>
+      ${e.x ? `<div class="det fil-x">${ech(e.x)}</div>` : ""}</div><div class="heure">${ech(date)}</div>`;
+    return e.lien ? `<a class="ligne" href="${e.lien}" target="_blank" rel="noopener">${inner}</a>` : `<div class="ligne">${inner}</div>`;
+  };
+  return `<h2>Historique</h2><div class="liste histo">${l.map(ligne).join("")}</div>
+    ${(c.echanges || []).length ? "" : `<p class="sous" style="margin:6px 4px 0;font-size:12.5px">Les mails échangés avec le client apparaissent ici (boîte Gmail relevée toutes les 30 min).</p>`}
+    ${c.email && window.BatiMails ? `<a class="plus" href="${BatiMails.rechercheGmail(c.email)}" target="_blank" rel="noopener">Tout voir dans Gmail</a>` : ""}`;
+}
+
+/** Choix du mail à envoyer : Gmail (app) s'ouvre avec le message prêt. */
+function panneauEcrire(c) {
+  const z = $("#ecrire");
+  if (!window.BatiMails) { toast("Modèles indisponibles, rechargez l'app."); return; }
+  if (!z.classList.contains("cache")) { z.classList.add("cache"); return; }
+  z.innerHTML = `<div class="info" style="padding:12px 14px">
+    <div style="font-size:13px;color:var(--gris);border:0;padding:0 0 8px;display:block">Quel mail ? Gmail s'ouvre déjà rempli : relisez, modifiez si besoin, envoyez. Puis notez « Mail envoyé » plus bas.</div>
+    <div class="puces" style="flex-wrap:wrap;border:0;padding:0;justify-content:flex-start;gap:6px">${BatiMails.modeles.map(m =>
+      `<button type="button" data-modele="${m.id}">${ech(m.nom)}</button>`).join("")}</div>
+    <div style="border:0;padding:8px 0 0;font-size:12.5px;color:var(--gris);display:block">Pas l'app Gmail ? <a href="#" data-modele-mailto="premiere">Ouvrir dans Mail</a></div>
+  </div>`;
+  z.classList.remove("cache");
 }
 
 function fermer() {
@@ -278,6 +311,13 @@ async function noter(id) {
     if (r.contacts) etat.contacts = r.contacts;
     toast("C'est noté."); rendre(); ouvrir(id);
   } catch (e) { toast("Échec : " + e.message); }
+}
+
+/** Après ouverture de Gmail : « Mail envoyé » présélectionné avec rappel à 3 jours. */
+function preparerNoteMail() {
+  const b = document.querySelector('#fiche .noter [data-genre="mail"]');
+  if (b) b.click();
+  setTimeout(() => document.querySelector("#fiche .noter")?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
 }
 
 async function supprimer(id) {
@@ -360,6 +400,14 @@ async function essai() {
 /* ------------------------------------------------------------ événements */
 
 document.addEventListener("click", e => {
+  const am = e.target.closest("[data-modele-mailto]");
+  if (am) {
+    e.preventDefault();
+    const c = etat.contacts.find(x => x.id === Number($("#fiche").dataset.id));
+    BatiMails.ouvrir(c, am.dataset.modeleMailto, "mailto");
+    preparerNoteMail();
+    return;
+  }
   if (e.target.closest("a")) return;          // appeler / écrire : le lien suffit
   const t = e.target.closest("button,[data-id],[data-fermer]");
   if (!t) return;
@@ -379,6 +427,13 @@ document.addEventListener("click", e => {
     return;
   }
   if (t.dataset.enregistrer !== undefined) return noter(id);
+  if (t.dataset.ecrire !== undefined) return panneauEcrire(etat.contacts.find(x => x.id === id));
+  if (t.dataset.modele) {
+    const c = etat.contacts.find(x => x.id === id);
+    BatiMails.ouvrir(c, t.dataset.modele);           // app Gmail sur iPhone, Gmail web sur ordinateur
+    preparerNoteMail();
+    return;
+  }
   if (t.dataset.supprimer !== undefined) return supprimer(id);
   if (t.dataset.statut) return changerStatut(id, t.dataset.statut);
   if (t.dataset.id) return ouvrir(Number(t.dataset.id));

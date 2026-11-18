@@ -107,7 +107,7 @@ async function bilan(env, depuis) {
   const lignes = [];
   let titre;
   if (!nv.length) {
-    titre = "Bilan du matin — aucune nouvelle demande";
+    titre = (m.recus || []).length ? "Bilan du matin — réponses de clients" : "Bilan du matin — aucune nouvelle demande";
   } else {
     titre = `Bilan du matin — ${nv.length} nouvelle${nv.length > 1 ? "s" : ""} demande${nv.length > 1 ? "s" : ""}`;
     lignes.push(liste(nv.map(nomCourt)) + ".");
@@ -115,10 +115,15 @@ async function bilan(env, depuis) {
     const sansMail = nv.filter(c => !(c.repondu || c.mail_envoye));
     const confirmes = nv.filter(c => c.confirme).length;
     let info = informes.length === nv.length
-      ? (nv.length > 1 ? "Toutes informées par mail" : "Informée par mail")
-      : `${informes.length}/${nv.length} informée${informes.length > 1 ? "s" : ""} par mail — sans mail : ${liste(sansMail.map(nomCourt), 3)}`;
+      ? (nv.length > 1 ? "Toutes contactées par mail" : "Contactée par mail")
+      : `${informes.length}/${nv.length} contactée${informes.length > 1 ? "s" : ""} par mail — à écrire : ${liste(sansMail.map(nomCourt), 3)}`;
     if (confirmes) info += ` (${confirmes} confirmation${confirmes > 1 ? "s" : ""} de réception)`;
     lignes.push(info + ".");
+  }
+  const recus = m.recus || [];
+  if (recus.length) {
+    const noms = [...new Set(recus.map(nomCourt))];
+    lignes.push(`${noms.length > 1 ? "Ont répondu" : "A répondu"} par mail : ${liste(noms, 3)}.`);
   }
   const afaire = [];
   if (m.sans_appel) afaire.push(`${m.sans_appel} à appeler (+ 48 h)`);
