@@ -10,7 +10,7 @@
   "background_color": "#F2F5F9",
   "lang": "fr",
   "icons": [
-    { "src": "/hub/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/hub/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "/hub/android-chrome-mac-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/hub/android-chrome-mac-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

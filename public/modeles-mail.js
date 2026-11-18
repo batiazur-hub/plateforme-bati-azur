@@ -3,8 +3,8 @@
  *
  * Depuis le 18 novembre 2026, plus aucun mail automatique : on clique sur
  * « Envoyer un mail », Gmail s'ouvre avec le message deja ecrit (destinataire,
- * objet, texte), on relit, on modifie si besoin, on envoie. La signature est
- * celle de Gmail, ajoutee par Gmail lui-meme.
+ * objet, texte), on relit, on modifie si besoin, on envoie. La signature de
+ * l'entreprise est toujours au bas du texte (SIGNATURE).
  *
  *   <script src="https://batiazurpiscine.fr/modeles-mail.js"></script>
  *   BatiMails.modeles             -> [{id, nom}]
@@ -16,6 +16,21 @@
  */
 (() => {
   const TELEPHONE = "04 70 34 21 96";
+
+  // Signature de la boite Gmail de l'entreprise, toujours ajoutee au bas des
+  // mails (Gmail ne l'insere pas dans un brouillon ouvert par lien, ni l'app
+  // Gmail de l'iPhone).
+  const SIGNATURE = `--
+Arnaldo Monteiro
+Gérant · Bati Azur Piscines – Spa
+
+Tél. ${TELEPHONE}
+Web batiazur.odoo.com
+Les Cailles, route de Saint Ennemond – 03000 Avermes
+
+Votre piscine vous rend heureux ?
+Votre avis compte beaucoup pour notre équipe : 30 secondes suffisent.
+★★★★★ Laisser un avis Google : https://g.page/r/CfwnXPUtWcjnEB0/review`;
   const SUIVI = "https://suivi.batiazurpiscine.fr";
 
   const A_ENVOYER = [
@@ -120,7 +135,7 @@ Cordialement,
 
   function brouillon(c, id) {
     const m = MODELES.find(x => x.id === id) || MODELES[0];
-    return { modele: m.id, nom: m.nom, a: c.email || "", sujet: m.sujet(c), corps: m.corps(c) };
+    return { modele: m.id, nom: m.nom, a: c.email || "", sujet: m.sujet(c), corps: m.corps(c) + "\n" + SIGNATURE + "\n" };
   }
 
   /** Adresse qui ouvre le brouillon : Gmail dans un nouvel onglet sur
