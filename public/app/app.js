@@ -92,6 +92,7 @@ async function charger(silencieux) {
     ]);
     if (n !== etat.charge) return;
     etat.contacts = contacts.contacts; etat.matin = matin;
+    if (contacts.compte && window.BatiMails) BatiMails.compte.ecrire(contacts.compte);
     $("#maj").textContent = "à jour " + heure(new Date().toISOString());
     rendre();
     const h = location.hash.match(/^#contact-(\d+)$/);

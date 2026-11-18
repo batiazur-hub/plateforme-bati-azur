@@ -127,15 +127,28 @@ Cordialement,
   const mobile = () => /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
 
   /** Numero du compte Gmail dans Chrome (0 = premier compte connecte). */
+  // Le Suivi donne l'adresse du compte (champ « compte » de /api/contacts) :
+  // Gmail ouvre alors le bon compte, quelle que soit sa place dans Chrome.
+  // A defaut, un numero de compte (0 = premier connecte).
   const compte = {
     lire() { try { return localStorage.getItem("bati.compteGmail") || "0"; } catch { return "0"; } },
-    ecrire(n) { try { localStorage.setItem("bati.compteGmail", String(n).replace(/\D/g, "") || "0"); } catch {} },
+    ecrire(v) {
+      v = String(v || "").trim();
+      try { localStorage.setItem("bati.compteGmail", v.includes("@") ? v : (v.replace(/\D/g, "") || "0")); } catch {}
+    },
   };
-  const base = () => `https://mail.google.com/mail/u/${compte.lire()}/`;
+  const base = () => {
+    const v = compte.lire();
+    return v.includes("@") ? `https://mail.google.com/mail/?authuser=${encodeURIComponent(v)}` : `https://mail.google.com/mail/u/${v}/`;
+  };
+  const avec = (url, params) => url + (url.includes("?") ? "&" : "?") + params;
 
   function brouillon(c, id) {
     const m = MODELES.find(x => x.id === id) || MODELES[0];
-    return { modele: m.id, nom: m.nom, a: c.email || "", sujet: m.sujet(c), corps: m.corps(c) + "\n" + SIGNATURE + "\n" };
+    const texte = m.corps(c);
+    // texte : sans signature (le brouillon Gmail recoit la vraie, en HTML) ;
+    // corps : avec la signature en texte, pour l'ouverture par lien.
+    return { modele: m.id, nom: m.nom, a: c.email || "", sujet: m.sujet(c), texte, corps: texte + "\n" + SIGNATURE + "\n" };
   }
 
   /** Adresse qui ouvre le brouillon : Gmail dans un nouvel onglet sur
@@ -144,7 +157,7 @@ Cordialement,
     const q = (k, v) => `${k}=${encodeURIComponent(v)}`;
     if (ou === "mailto") return `mailto:${encodeURIComponent(b.a)}?${q("subject", b.sujet)}&${q("body", b.corps)}`;
     if (ou === "app") return `googlegmail:///co?${q("to", b.a)}&${q("subject", b.sujet)}&${q("body", b.corps)}`;
-    return `${base()}?view=cm&fs=1&tf=1&${q("to", b.a)}&${q("su", b.sujet)}&${q("body", b.corps)}`;
+    return avec(base(), `view=cm&fs=1&tf=1&${q("to", b.a)}&${q("su", b.sujet)}&${q("body", b.corps)}`);
   }
 
   function ouvrir(c, id, ou) {
@@ -156,6 +169,30 @@ Cordialement,
     return b;
   }
 
+  /**
+   * Ordinateur : le Suivi depose un brouillon HTML dans Gmail, avec la vraie
+   * signature (« Signature 2027 »), et Gmail s'ouvre directement dessus.
+   * `deposer(brouillon)` appelle le Suivi et rend l'identifiant Gmail.
+   * En cas d'echec : ouverture classique par lien (signature en texte).
+   */
+  function ouvrirBrouillon(c, id, deposer) {
+    const b = brouillon(c, id);
+    const fenetre = window.open("about:blank", "_blank");   // ouverte tout de suite : pas de blocage
+    if (fenetre) fenetre.document.write('<p style="font:16px -apple-system,sans-serif;padding:24px">Préparation du mail dans Gmail…</p>');
+    Promise.resolve(deposer(b)).then(r => {
+      // Le compte est designe par son adresse (renvoyee par le Suivi) : peu
+      // importe sa place parmi les comptes Google connectes dans Chrome.
+      const url = r && r.hex
+        ? (r.compte ? `https://mail.google.com/mail/?authuser=${encodeURIComponent(r.compte)}#drafts/${r.hex}` : `${base()}#drafts/${r.hex}`)
+        : lien(b, "web");
+      if (fenetre) fenetre.location.href = url; else window.open(url, "_blank");
+    }).catch(() => {
+      const url = lien(b, "web");
+      if (fenetre) fenetre.location.href = url; else window.open(url, "_blank");
+    });
+    return b;
+  }
+
   /** Tous les echanges avec ce client, dans Gmail. */
   const rechercheGmail = adresse => `${base()}#search/${encodeURIComponent(adresse)}`;
   /** Un fil precis dans Gmail (identifiant hexadecimal du fil). */
@@ -163,6 +200,6 @@ Cordialement,
 
   window.BatiMails = {
     modeles: MODELES.map(({ id, nom }) => ({ id, nom })),
-    brouillon, lien, ouvrir, rechercheGmail, filGmail, mobile, compte,
+    brouillon, lien, ouvrir, ouvrirBrouillon, rechercheGmail, filGmail, mobile, compte,
   };
 })();
