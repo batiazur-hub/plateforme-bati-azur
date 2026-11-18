@@ -26,7 +26,7 @@ const OUTILS = { suivi: "SUIVI", pro: "PRO", bons: "BONS", implantation: "IMPLAN
 // Ce qui reste ouvert sans session : les liens de confirmation envoyes aux
 // clients, et les routes du robot (protegees par leur propre jeton).
 const OUVERT = {
-  suivi: [/^\/c\/[0-9a-f]{32}$/, /^\/api\/depot$/, /^\/api\/repondu$/, /^\/api\/echanges$/, /^\/api\/courrier(\/.*)?$/],
+  suivi: [/^\/(manifest\.webmanifest|sw\.js|icone-(192|512)\.png|favicon\.svg)$/, /^\/c\/[0-9a-f]{32}$/, /^\/api\/depot$/, /^\/api\/repondu$/, /^\/api\/echanges$/, /^\/api\/courrier(\/.*)?$/],
 };
 
 /* ---------------------------------------------------------------- outils */
@@ -389,6 +389,16 @@ export default {
       // Icones du hub, utilisees aussi par les pages de connexion.
       if (/^\/hub\/(favicon[^/]*|apple-touch-icon\.png|android-chrome-[^/]+\.png)$/.test(chemin))
         return env.ASSETS.fetch(requete);
+      // Installation du hub comme application (Chrome) : le manifeste et le
+      // service worker sont lus sans cookie, ils doivent etre publics.
+      if (chemin === "/hub/site.webmanifest" || chemin === "/hub/sw.js" || chemin === "/installer.js") {
+        const r = await env.ASSETS.fetch(requete);
+        const h = new Headers(r.headers);
+        if (chemin.endsWith(".webmanifest")) h.set("content-type", "application/manifest+json");
+        h.set("cache-control", "no-cache");
+        if (chemin === "/installer.js") h.set("access-control-allow-origin", "*");
+        return new Response(r.body, { status: r.status, headers: h });
+      }
 
       const qui = await session(requete, env);
       if (!qui) return rediriger(`/connexion?retour=${encodeURIComponent(url.href)}`);

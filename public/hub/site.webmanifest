@@ -1,24 +1,16 @@
 {
-  "name": "Bâti Azur Hub",
-  "short_name": "BA Hub",
-  "description": "Plateforme centrale des outils internes Bâti Azur.",
-  "start_url": "./",
-  "scope": "./",
+  "id": "/hub/",
+  "name": "Bati Azur Hub",
+  "short_name": "Hub Bati Azur",
+  "description": "Plateforme centrale des outils internes Bati Azur.",
+  "start_url": "/hub/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#0F4FA3",
-  "background_color": "#0F4FA3",
+  "theme_color": "#0B3A5E",
+  "background_color": "#F2F5F9",
+  "lang": "fr",
   "icons": [
-    {
-      "src": "./android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./android-chrome-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "/hub/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/hub/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

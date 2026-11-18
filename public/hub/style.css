@@ -542,3 +542,7 @@ footer {
 }
 
 .topbar-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* Bouton « Installer » (Chrome) : visible seulement quand l'installation est possible. */
+[data-installer][hidden] { display: none !important; }
+.version-badge.installer { cursor: pointer; font: inherit; font-size: 13px; color: var(--accent, #0F4FA3); font-weight: 600; }

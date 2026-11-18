@@ -36,6 +36,7 @@
         </div>
       </div>
       <div class="topbar-actions">
+      <button type="button" class="version-badge installer" data-installer hidden title="Installer le hub comme application sur cet ordinateur">⤓ Installer</button>
       <span data-lanceur-bati></span>
       <a class="version-badge" href="/deconnexion" title="Se déconnecter du hub et des outils">Se déconnecter</a>
       </div>
@@ -183,5 +184,7 @@
 
   <script src="./app.js"></script>
 <script src="/lanceur.js" defer></script>
+<script src="/installer.js"></script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/hub/sw.js", { scope: "/hub/" }).catch(() => {});</script>
 </body>
 </html>
