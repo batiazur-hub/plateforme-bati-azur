@@ -85,6 +85,13 @@ try {
     sel.appendChild(og);
   }
   sel.value=cur||'droit';
+  // choix du coin pour les escaliers d'angle (vu depuis le bassin, face à la paroi)
+  const side=$('escSide');
+  const lab=document.createElement('label'); lab.textContent='Coin'; lab.id='escCoinL';
+  const coin=document.createElement('select'); coin.id='escCoin';
+  coin.appendChild(new Option('Coin de gauche','1')); coin.appendChild(new Option('Coin de droite','2'));
+  side.after(lab, coin);
+  coin.onchange=()=>render();
 } catch(e) { console.warn('[escaliers]', e); }
 
 /* Mondial Piscine construit sur mesure : les dimensions ci-dessous sont des
@@ -141,6 +148,7 @@ applyModel = function(m){
     if(m.w)  $('escW').value=m.w;
     if(m.bqD){ $('bqD').value=m.bqD; $('bqDV').textContent=m.bqD; }
     if(m.side!==undefined) $('escSide').value=String(m.side);
+    if($('escCoin')) $('escCoin').value=String(m.coin||1);
   }
   applyModel0(m);
   if(m && m.id && m.id.startsWith('mp-'))
@@ -161,6 +169,8 @@ escFields = function(){
   show($('escSide'), t!=='non');
   show($('escSide').previousElementSibling, t!=='non');
   show($('escW').parentElement, ['droit','droit_coin','banq_droit','trapeze','oblique'].includes(t));
+  const coin=['droit_coin','oblique','angle','angle_pan','angle_carre','banq_angle','banq_angle_pan'].includes(t);
+  show($('escCoin'), coin); show($('escCoinL'), coin);
 };
 escFields();
 
@@ -181,24 +191,25 @@ function stairParts(L,W){
   const bqW=clamp(+$('bqW').value,0.2,3), bqD=clamp(+$('bqD').value,10,90)/100;
   const mk=o=>Object.assign({side,SL,kind:'droit',uc:SL/2,w,n,run,rise,first:0,tl:0,tr:0,corner:0},o);
   const banquette=()=>mk({n:1,run:bqW,rise:bqD,w:SL});
+  const cn=+(($('escCoin')||{}).value||1), co=cn===2?SL:0;
   const T=0.32;                                   // trapèze : rétrécissement par côté et par mètre
   switch(type){
     case 'droit':          return [mk({})];
-    case 'droit_coin':     return [mk({uc:w/2})];
+    case 'droit_coin':     return [mk({uc:cn===2?SL-w/2:w/2})];
     case 'large':          return [mk({w:SL})];
     case 'large1':         return [mk({w:SL, first:bqW})];
     case 'trapeze':        return [mk({tl:T,tr:T})];
     case 'trapeze_large':  return [mk({w:SL,tl:T,tr:T})];
     case 'roman':          return [mk({kind:'rond'})];
-    case 'oblique':        return [mk({kind:'oblique'})];
-    case 'angle':          return [mk({kind:'rond',uc:0,corner:1})];
-    case 'angle_pan':      return [mk({kind:'pan'})];
-    case 'angle_carre':    return [mk({kind:'carre'})];
+    case 'oblique':        return [mk({kind:'oblique',corner:cn})];
+    case 'angle':          return [mk({kind:'rond',uc:co,corner:cn})];
+    case 'angle_pan':      return [mk({kind:'pan',corner:cn})];
+    case 'angle_carre':    return [mk({kind:'carre',corner:cn})];
     case 'angle2':         return [mk({kind:'rond',uc:0,corner:1}), mk({kind:'rond',uc:SL,corner:2})];
     case 'banq':           return [banquette()];
     case 'banq_droit':     return [banquette(), mk({})];
-    case 'banq_angle':     return [banquette(), mk({kind:'rond',uc:0,corner:1})];
-    case 'banq_angle_pan': return [banquette(), mk({kind:'pan'})];
+    case 'banq_angle':     return [banquette(), mk({kind:'rond',uc:co,corner:cn})];
+    case 'banq_angle_pan': return [banquette(), mk({kind:'pan',corner:cn})];
     case 'banq_angle2':    return [banquette(), mk({kind:'rond',uc:0,corner:1}), mk({kind:'rond',uc:SL,corner:2})];
     case 'plage':          return [mk({n:1,run:bqW*2,rise:bqD,w:SL})];
     default:               return [mk({})];
@@ -244,6 +255,8 @@ function buildStairGrid(L,W){
   const d=new Float32Array(gw*gh);
   const ps=+$('dPs').value, pd=+$('dPd').value, fond=$('fond').value;
   const parts=stairParts(L,W);
+  // escalier calé sur le coin de droite : même calcul, abscisse en miroir
+  for(const p of parts) if(p.corner===2) p.mir=Object.assign({},p,{uc:p.SL-p.uc});
   const base=X=>{
     const t=clamp(X/L,0,1);
     switch(fond){
@@ -263,7 +276,7 @@ function buildStairGrid(L,W){
         const [u,v]=localOf(p.side,L,W,X,Y);
         // escalier d'angle côté fin de paroi : on le traite en miroir
         const uu = p.corner===2 ? p.SL-u : u;
-        const s=partDepth(p.corner===2 ? Object.assign({},p,{uc:0}) : p, uu, v);
+        const s=partDepth(p.mir||p, uu, v);
         if(s>0 && s<D) D=s;
       }
       d[j*gw+i]=D; if(D>maxD) maxD=D;
@@ -280,7 +293,7 @@ function prepStairs(c){
   roundR=+$('rr').value/100;
   const key=[c.L,c.W,$('shape').value,$('rr').value,$('fond').value,$('dPs').value,$('dPd').value,
              $('esc').value,$('escSide').value,$('escN').value,$('escR').value,$('escH').value,$('escW').value,
-             $('bqW').value,$('bqD').value].join('|');
+             $('bqW').value,$('bqD').value,($('escCoin')||{}).value].join('|');
   if(key!==stairKey){ stairGrid=buildStairGrid(c.L,c.W); stairKey=key; }
   grid=stairGrid;
 }
