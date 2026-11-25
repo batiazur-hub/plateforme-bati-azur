@@ -10,6 +10,8 @@
   "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "photos-batiazur" }],
   // Verification de la session : on demande au Worker du hub.
   "services": [{ "binding": "HUB", "service": "hub-batiazur" }],
+  // Menage nocturne (voir nettoyer() dans src/index.js).
+  "triggers": { "crons": ["17 2 * * *"] },
   "limits": { "cpu_ms": 30000 },
   "observability": { "enabled": true }
 }

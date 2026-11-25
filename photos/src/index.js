@@ -23,6 +23,16 @@ const ICI = "https://photos.batiazurpiscine.fr";
 const MAX_FICHIER = 95 * 1024 * 1024;
 const STATUTS = ["a-publier", "ecarte", "publie"];
 
+// Rester dans la part gratuite de R2 (10 Go) : plafond a 9 Go. Chaque nuit on
+// supprime les envois de plus de 2 ans, puis les plus anciens tant que
+// l'ensemble depasse 8 Go. Les envois de moins de 30 jours ne sont jamais
+// supprimes automatiquement (ils n'ont peut-etre pas encore ete publies).
+const GO = 1024 ** 3;
+const PLAFOND = 9 * GO;
+const CIBLE = 8 * GO;
+const AGE_MAX_JOURS = 730;
+const PROTEGE_JOURS = 30;
+
 /* --------------------------------------------------------------- outils */
 
 const json = (d, statut = 200) => new Response(JSON.stringify(d), {
@@ -75,6 +85,41 @@ async function modifierIndex(env, changer) {
   throw new Error("index occupé, réessayez");
 }
 
+/* ----------------------------------------------------------- nettoyage */
+
+const poids = e => (e.medias || []).reduce((t, m) => t + (m.octets || 0), 0);
+const occupe = index => (index.envois || []).reduce((t, e) => t + poids(e), 0);
+
+/**
+ * Retire de l'index puis de R2 les envois trop vieux, et les plus anciens
+ * tant que le total depasse « limite ». Renvoie le total restant.
+ */
+async function nettoyer(env, limite) {
+  const maintenant = Date.now(), jour = 86400000;
+  const supprimes = [];
+  const reste = await modifierIndex(env, ix => {
+    supprimes.length = 0;
+    const envois = ix.envois || [];
+    const age = e => (maintenant - new Date(e.date).getTime()) / jour;
+    let garde = envois.filter(e => { if (age(e) > AGE_MAX_JOURS) { supprimes.push(e); return false; } return true; });
+    let total = occupe({ envois: garde });
+    // du plus ancien au plus recent
+    const parAnciennete = [...garde].sort((a, b) => new Date(a.date) - new Date(b.date));
+    for (const e of parAnciennete) {
+      if (total <= limite) break;
+      if (age(e) < PROTEGE_JOURS) break;
+      supprimes.push(e); total -= poids(e);
+      garde = garde.filter(x => x !== e);
+    }
+    ix.envois = garde;
+    return total;
+  });
+  const cles = supprimes.flatMap(e => (e.medias || []).map(m => m.cle));
+  for (let i = 0; i < cles.length; i += 1000) await env.PHOTOS.delete(cles.slice(i, i + 1000));
+  if (supprimes.length) console.log(`nettoyage : ${supprimes.length} envoi(s), ${cles.length} fichier(s) supprimés`);
+  return reste;
+}
+
 /* ------------------------------------------------------------------ api */
 
 // Un « envoi » = des photos/videos envoyees ensemble, avec le type de travaux,
@@ -87,7 +132,7 @@ async function api(requete, env, chemin, qui) {
 
   if (chemin === "/api/index" && m === "GET") {
     const { index } = await lireIndex(env);
-    return json({ envois: index.envois || [], qui });
+    return json({ envois: index.envois || [], qui, occupe: occupe(index), plafond: PLAFOND });
   }
 
   if (chemin === "/api/envois" && m === "POST") {
@@ -127,10 +172,13 @@ async function api(requete, env, chemin, qui) {
     if (!ext) return erreur("Format non pris en charge.");
     const { index } = await lireIndex(env);
     if (!(index.envois || []).some(e => e.id === r[1])) return erreur("Envoi inconnu.", 404);
+    if (occupe(index) + fichier.size > PLAFOND &&
+        await nettoyer(env, PLAFOND - fichier.size) + fichier.size > PLAFOND)
+      return erreur("Photothèque pleine (9 Go) : supprimez d'anciens envois ou prévenez Clément.", 507);
     const n = id(), cle = `medias/${r[1]}/${n}.${ext}`;
     await env.PHOTOS.put(cle, fichier.stream(), { httpMetadata: { contentType: type } });
     const media = { id: n, cle, type: type.startsWith("video") ? "video" : "photo",
-      largeur: Number(f.get("largeur")) || 0, hauteur: Number(f.get("hauteur")) || 0, prise: propre(f.get("prise"), 30) };
+      largeur: Number(f.get("largeur")) || 0, hauteur: Number(f.get("hauteur")) || 0, prise: propre(f.get("prise"), 30), octets: fichier.size };
     await modifierIndex(env, ix => { const e = ix.envois.find(x => x.id === r[1]); if (e) e.medias.push(media); });
     return json(media);
   }
@@ -285,7 +333,7 @@ textarea{min-height:96px;resize:vertical}
 const TYPES = [["coque","Piscine coque"],["beton","Piscine béton"],["renovation","Rénovation"],["terrasse","Terrasse / dalle"],["entretien","Entretien / SAV"],["equipement","Équipement"],["autre","Autre"]];
 const AVANCEMENTS = [["avant","Avant"],["travaux","Travaux"],["termine","Terminé"]];
 const NOM = Object.fromEntries([...TYPES, ...AVANCEMENTS]);
-let ENVOIS = [], choisis = [], choix = { type: "", avancement: "" };
+let ENVOIS = [], OCCUPE = 0, choisis = [], choix = { type: "", avancement: "" };
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const url = m => "/f/" + m.cle;
@@ -300,7 +348,7 @@ async function appel(chemin, options = {}) {
   if (!r.ok) throw new Error(d.erreur || "Erreur " + r.status);
   return d;
 }
-async function charger(){ ENVOIS = (await appel("/api/index")).envois; rendre(); }
+async function charger(){ const d = await appel("/api/index"); ENVOIS = d.envois; OCCUPE = d.occupe || 0; rendre(); }
 
 function rendre(){
   const v = $("#vue");
@@ -309,7 +357,7 @@ function rendre(){
     const p = e.medias.find(m => m.type === "photo");
     const pastille = e.statut === "publie" ? '<span class="pastille publie">Publié</span>' : e.statut === "ecarte" ? '<span class="pastille ecarte">Pas publié</span>' : '';
     return '<button class="envoi ' + e.statut + '" data-e="' + e.id + '"><div class="im" style="background-image:url(' + (p ? url(p) : "") + ')"><b>' + e.medias.length + '</b></div><div class="tx"><strong>' + esc(NOM[e.type]) + ' · ' + esc(NOM[e.avancement]) + pastille + '</strong><small>' + quand(e.date) + (e.commune ? ' · ' + esc(e.commune) : '') + '</small>' + (e.legende ? '<em>' + esc(e.legende) + '</em>' : '') + '</div></button>';
-  }).join("");
+  }).join("") + '<p class="date" style="text-align:center;margin:18px 0 90px">Espace utilisé : ' + (OCCUPE / 1073741824).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + ' Go sur 9 Go<br>Les envois de plus de 2 ans sont supprimés automatiquement.</p>';
   v.querySelectorAll("[data-e]").forEach(b => b.onclick = () => ouvrir(b.dataset.e));
 }
 
@@ -430,5 +478,10 @@ export default {
     } catch (e) {
       return erreur(e.message || "Erreur", 500);
     }
+  },
+
+  // Chaque nuit : menage pour rester sous 8 Go et sans envois de plus de 2 ans.
+  async scheduled(_evenement, env, ctx) {
+    ctx.waitUntil(nettoyer(env, CIBLE));
   },
 };
