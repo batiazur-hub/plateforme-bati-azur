@@ -1,0 +1,15 @@
+{
+  // Phototheque Bati Azur : https://photos.batiazurpiscine.fr
+  // Depot des photos et videos de chantier depuis l'iPhone (connexion du hub),
+  // lues ensuite par le robot des reseaux sociaux (/api/robot/*, jeton).
+  "name": "photos-batiazur",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "routes": [{ "pattern": "photos.batiazurpiscine.fr", "custom_domain": true }],
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "photos-batiazur" }],
+  // Verification de la session : on demande au Worker du hub.
+  "services": [{ "binding": "HUB", "service": "hub-batiazur" }],
+  "limits": { "cpu_ms": 30000 },
+  "observability": { "enabled": true }
+}

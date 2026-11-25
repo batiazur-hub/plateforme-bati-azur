@@ -1,0 +1,31 @@
+name: Photothèque — déployer
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["photos/**"]
+permissions:
+  contents: read
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: photos
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Bucket R2 (une seule fois)
+        run: npx --yes wrangler@4 r2 bucket create photos-batiazur || echo "bucket déjà là"
+      - name: Déployer
+        run: npx --yes wrangler@4 deploy
+      - name: Jeton du robot
+        env:
+          JETON: ${{ secrets.PHOTOS_ROBOT_TOKEN }}
+        run: |
+          if [ -n "$JETON" ]; then printf '%s' "$JETON" | npx --yes wrangler@4 secret put ROBOT_TOKEN; fi
