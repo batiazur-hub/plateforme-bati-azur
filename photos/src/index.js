@@ -185,12 +185,13 @@ async function robot(requete, env, chemin) {
 
 /* ------------------------------------------------------------- l'appli */
 
-const ICONE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5284CB"/><stop offset="1" stop-color="#2C4F80"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#g)"/><rect x="112" y="150" width="288" height="220" rx="36" fill="none" stroke="#fff" stroke-width="28"/><circle cx="256" cy="262" r="58" fill="none" stroke="#fff" stroke-width="28"/><rect x="196" y="112" width="120" height="52" rx="18" fill="#fff"/><path d="M120 420c40-26 80-26 120 0s80 26 120 0 60-20 72-14" fill="none" stroke="#9FD3FF" stroke-width="22" stroke-linecap="round"/></svg>`;
+const ICONE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect width="256" height="256" rx="57" fill="#5E5CE6"/><g transform="translate(66.0 66.0) scale(5.1667)" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></g></svg>`;
+const ICONE_PNG = "iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAIBElEQVR4nO3dO3QVRRzH8QUCaIIgcIPaJG3ShpZYimWwBNQG8FEAigUgoSBAKESFwgfQeBRKSSmWhpa0SZsUvhJFkUQeMTr/xHuM4e7c3b27e+/88v0UsjlHIJx8M8zOzC5rXtv//d8RIIKgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgIYWgG9DV3Rb19T3lrvIzNvYgmpqcd1fIgqAz2r27I9q7f7O7yt+1K79Fo6N/uiukRdAZ9Pc/HR049Ky7Kg5RZ0PQKdk0Y+hsp7sq3uCpaaYfKRF0CpXOddGZoUrU0bHWfVS82dmF6PTgTDQz/Zf7CEkQdELt7Wui4ye3R93d691H5ZmcfBxdOP9LNDfHlykJgk7o8NGt0c6d+a5oJHXnzoPo8sd33RXqIegE9rnVjJfcqobPt7dm3Si64K7Sq1TWRbv6291VPPv1r391z13Bh6DrSLKicXt0Lrp65Xd3ld3BQ1vqRs3KR30E7ZFkRWNi/GE0fP5Xd9W4oXOVqKvLP0dn5cOPoGMkWdGYmnocDZ/L74bNbjwt6kqlzX1UGysffqsiaAulp2eDG3H9o99yfe4G0LeiYfPlYbf6kPdoaX8rnHCrKe3t8d9ItvIx5m4Uk5py///ExCP3Oct/qbWDtlF2YGBT1P+if26ahcU8Mf7IXeWvb+fG6MjRbe4qX6PfzUUjI/elR3fZoJPczGVVxs0ZZ0WykQz6wMEthYzKJo8VjaSSrHxkZaP1tavl/DnKJBd0kSNbnisaSdlNYr2Vj6xuuHXtW259W4lU0D29GxZvqIqQ94pGUnZDa1H7Vj4aobYMKBX08ZPbot7eje4qXxbzVTfvbNYX3lY+Drr7gSJG6nH3t86Fkv/WKZJM0LaicfHDHe6qNltms+1jW/JKM8raz2tWyCtZ2L7lvJVsdLelR9u29/28Y+/+LLPyIRO0b+48MzMfDb4/4+KU+KOmZmH7pi1Kc2mZoH0rAsrLVEn5ljHLXLkpmkzQJ9z8uSdm/lzkJkgofDfMzVi9KcqqCPr1V39w/y1XX99GN+dduomzmEz1m8q2osfGHrqrcn3x5Qvuv08i6BbUCkHbjalttds5EN+hJmOHjOw8Rplb0QQdkGYGbTdde/dtzrw7abt2N67fK/ymlaAD0qygbVQ+fGTr4vJYI2w58fKlu4WO1gQdkGYEbevCx09srzu9SMqmIReG8z+SWkXQASk7aJtmfOA2cvKKucqifs9tdBQx/SDogJQd9JmzlYanGXFs+nH61Iy7yhdBB6TMoH27ksvZKoadAxn/d7mu1y3f2XkMWwWpp4jNIIIOSFlBJ5lqWMS+w0w296532KiIqQdBB6SsoOuNzjYqX0r4UpgjR7d6R+u8R2mCDkhZQfsiTHsIykb7ix/tcD/WHu3TfHMkQdABKSvouChMljMjti0ed8bClPG5E3QLKiNom/v6XjyT9feJC83k+URJ3O9D0C2ojKB9o2kjUfg+9yyjfhyCDogvijKCtqdhsr5M0fcySIJOh6BT8AXdSBS+z52g0yHoFHxB27rx22/+5K7S++Sz52LXtQk6HYJOwZbZPv38eXdVW5aHTe20nu/h3rw+d0PQASkjaGMPm8bt8GV5JYDv1Qu242jr2nkh6ICUFfSeVzZFA3uecVe1pXmCOs9fKwmCDkhZQdebIphb38xGIzf/iN0xtKmLhbz75dorG1VZpjA+BB2QsoI2vmW2qunp+cWlPNsUsXczm6V3VLct/tzOztrvyKiyb4ibX993V/kh6ICUGbSNsL4zGI2ytzUdeyffk3aGoANSZtDGRlrfNngj8tzuXo6gA1J20Mb3NqKs8j4yuhxBB6QZQRuL2s5HNzr9sGmGPRQwdueh+6gYBB2QZgVtbPph56TjXoZYj52jtnPPRUwzliPogDQz6CobrQfc2nLSsC3kEbeSUdQUYyWCDkgrBF1lI3Z/f7vbUWyL2jvWuh+XdhZt529udsH9OO8init8RF6JoAPSSkG3KoIOCEHXR9ABIej6CDogvqDfeuNHtywm8cfMzHY3446+EnQL8gWd5yH5UPkeTiDoFsS/seJnS4pxu5r8GystyPdGI3s86vTgTK5HMUNiR17PDFViH/NS+oaXCdq+aL5zyhb1bfdFsy3m1cS25He50TkuZpP3uetmkgna2PZz3Gu6UFverxtrNqmg643SeJLS6Gykgja+mx/8n9LcuUouaOO7QcSSvB/AbRWSQRsbqS1quynCf+ym2GJWG5mrZIM2tjtmT1bbQ6mrPWwL2R7atSfSlXdNpYNezo50dnetX7xxXE3shm9y6nHpR1WbZdUEjdWBoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCGFoCHlH72BvMwCgBqxAAAAAElFTkSuQmCC";
 
 const MANIFESTE = JSON.stringify({
   name: "Photothèque Bati Azur", short_name: "Photos", start_url: "/", display: "standalone",
   background_color: "#F4F7FB", theme_color: "#3E6398", lang: "fr",
-  icons: [{ src: "/icone.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
+  icons: [{ src: "/icone.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }, { src: "/icone.png", sizes: "180x180", type: "image/png" }],
 });
 
 const PAGE = `<!doctype html>
@@ -411,11 +412,8 @@ export default {
       return new Response(MANIFESTE, { headers: { "content-type": "application/manifest+json", "cache-control": "public, max-age=3600" } });
     if (chemin === "/icone.svg")
       return new Response(ICONE, { headers: { "content-type": "image/svg+xml", "cache-control": "public, max-age=604800" } });
-    if (chemin === "/icone.png") {
-      const o = await env.PHOTOS.get("app/icone-180.png");
-      if (o) return new Response(o.body, { headers: { "content-type": "image/png", "cache-control": "public, max-age=604800" } });
-      return new Response(ICONE, { headers: { "content-type": "image/svg+xml" } });
-    }
+    if (chemin === "/icone.png")
+      return new Response(Uint8Array.from(atob(ICONE_PNG), (c) => c.charCodeAt(0)), { headers: { "content-type": "image/png", "cache-control": "public, max-age=604800" } });
     if (chemin.startsWith("/api/robot/")) return robot(requete, env, chemin);
 
     const qui = await connecte(requete, env);

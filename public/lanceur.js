@@ -18,6 +18,7 @@
   const OUTILS = [
     { id: "hub", nom: "Hub", url: `${BASE}/hub/` },
     { id: "suivi", nom: "Suivi", url: "https://suivi.batiazurpiscine.fr/" },
+    { id: "photos", nom: "Photothèque", url: "https://photos.batiazurpiscine.fr/" },
     { id: "terrain", nom: "Terrain", url: "https://bati-azur-terrain.batiazur-mail.workers.dev/" },
     { id: "pro", nom: "Analyse Pro", url: "https://pro.batiazurpiscine.fr/" },
     { id: "analyse", nom: "Analyse", url: "https://analyse.batiazurpiscine.fr/" },

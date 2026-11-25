@@ -1,31 +1,66 @@
-name: Photothèque — déployer
+name: Déployer (Photothèque et hub)
+# Photothèque : à chaque modification de photos/. Hub : à chaque modification de public/ ou src/,
+# ou à la main (onglet Actions → Run workflow).
 on:
   workflow_dispatch:
+    inputs:
+      cible: { description: "photos, hub ou tout", required: true, default: "tout" }
   push:
     branches: [main]
-    paths: ["photos/**"]
+    paths: ["photos/**", "public/**", "src/**", "wrangler.jsonc"]
 permissions:
   contents: read
 jobs:
-  deployer:
+  quoi:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: photos
+    outputs:
+      photos: ${{ steps.c.outputs.photos }}
+      hub: ${{ steps.c.outputs.hub }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { fetch-depth: 2 }
+      - id: c
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            C="${{ inputs.cible }}"
+            [ "$C" = photos -o "$C" = tout ] && echo "photos=1" >> $GITHUB_OUTPUT
+            [ "$C" = hub -o "$C" = tout ] && echo "hub=1" >> $GITHUB_OUTPUT
+          else
+            CH=$(git diff --name-only HEAD~1 HEAD || true)
+            echo "$CH" | grep -q '^photos/' && echo "photos=1" >> $GITHUB_OUTPUT
+            echo "$CH" | grep -qE '^(public/|src/|wrangler\.jsonc)' && echo "hub=1" >> $GITHUB_OUTPUT
+          fi
+          true
+  photos:
+    needs: quoi
+    if: needs.quoi.outputs.photos == '1'
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: photos } }
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
-        with:
-          node-version: 22
+        with: { node-version: 22 }
       - name: Bucket R2 (une seule fois)
         run: npx --yes wrangler@4 r2 bucket create photos-batiazur || echo "bucket déjà là"
-      - name: Déployer
+      - name: Déployer la Photothèque
         run: npx --yes wrangler@4 deploy
       - name: Jeton du robot
-        env:
-          JETON: ${{ secrets.PHOTOS_ROBOT_TOKEN }}
-        run: |
-          if [ -n "$JETON" ]; then printf '%s' "$JETON" | npx --yes wrangler@4 secret put ROBOT_TOKEN; fi
+        env: { JETON: "${{ secrets.PHOTOS_ROBOT_TOKEN }}" }
+        run: if [ -n "$JETON" ]; then printf '%s' "$JETON" | npx --yes wrangler@4 secret put ROBOT_TOKEN; fi
+  hub:
+    needs: quoi
+    if: needs.quoi.outputs.hub == '1'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: npm ci --no-audit --no-fund
+      - name: Déployer le hub
+        run: npx --yes wrangler@4 deploy
