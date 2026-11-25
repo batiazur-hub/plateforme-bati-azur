@@ -3,10 +3,11 @@
 Appli iPhone (à ajouter sur l'écran d'accueil) pour déposer les photos et
 vidéos des chantiers, avec une légende. Connexion : celle du hub.
 
-- Chantiers : nom (privé, jamais publié) + commune (publique).
-- Chaque fichier : étape (avant, terrassement, gros œuvre, revêtement, mise en
-  eau, terminé, détail, entretien, équipe), légende, accord du client,
-  statut (à publier / ne pas publier / publié).
+- Un envoi = des photos/vidéos envoyées ensemble, avec le type de travaux
+  (coque, béton, rénovation, terrasse, entretien, équipement, autre),
+  l'avancement (avant, travaux, terminé), une légende et une commune
+  facultatives, et la date mise automatiquement. Aucun nom de client.
+- Chaque envoi peut être marqué « ne pas publier ».
 - Les photos sont réduites dans le téléphone (2400 px, JPEG) : les données
   EXIF, dont la position GPS, disparaissent.
 - Stockage : bucket R2 `photos-batiazur` (fichiers + `index.json`).
@@ -17,7 +18,7 @@ vidéos des chantiers, avec une légende. Connexion : celle du hub.
 
 - `GET /api/robot/index` : chantiers et fichiers ;
 - `GET /api/robot/f/<clé>` : un fichier ;
-- `POST /api/robot/publie` `{ "ids": [...], "lien": "..." }` : marque publié.
+- `POST /api/robot/publie` `{ "ids": [<envois>], "lien": "..." }` : marque publié.
 
 ## Déployer
 

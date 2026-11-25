@@ -2,7 +2,8 @@
  * Phototheque Bati Azur — https://photos.batiazurpiscine.fr
  *
  * Clement et son pere y deposent depuis l'iPhone les photos et videos des
- * chantiers (avec une legende). Le robot des reseaux sociaux s'en sert pour
+ * chantiers : type de travaux, avancement, legende, date automatique. Aucun
+ * nom de client. Le robot des reseaux sociaux s'en sert pour
  * fabriquer les publications Facebook / Instagram de Bati Azur.
  *
  * - Connexion : celle du hub. Le cookie « portail » vaut pour tout
@@ -20,7 +21,6 @@
 const HUB = "https://batiazurpiscine.fr";
 const ICI = "https://photos.batiazurpiscine.fr";
 const MAX_FICHIER = 95 * 1024 * 1024;
-const ETAPES = ["avant", "terrassement", "gros-oeuvre", "revetement", "mise-en-eau", "termine", "detail", "entretien", "equipe"];
 const STATUTS = ["a-publier", "ecarte", "publie"];
 
 /* --------------------------------------------------------------- outils */
@@ -56,7 +56,7 @@ async function connecte(requete, env) {
 
 async function lireIndex(env) {
   const o = await env.PHOTOS.get("index.json");
-  if (!o) return { etag: null, index: { chantiers: [], medias: [] } };
+  if (!o) return { etag: null, index: { envois: [] } };
   return { etag: o.etag, index: await o.json() };
 }
 
@@ -77,80 +77,65 @@ async function modifierIndex(env, changer) {
 
 /* ------------------------------------------------------------------ api */
 
+// Un « envoi » = des photos/videos envoyees ensemble, avec le type de travaux,
+// l'avancement, la legende et la date (mise automatiquement). Aucun nom de client.
+const TYPES = ["coque", "beton", "renovation", "terrasse", "entretien", "equipement", "autre"];
+const AVANCEMENTS = ["avant", "travaux", "termine"];
+
 async function api(requete, env, chemin, qui) {
   const m = requete.method;
 
   if (chemin === "/api/index" && m === "GET") {
     const { index } = await lireIndex(env);
-    return json({ ...index, qui });
+    return json({ envois: index.envois || [], qui });
   }
 
-  if (chemin === "/api/chantiers" && m === "POST") {
+  if (chemin === "/api/envois" && m === "POST") {
     const d = await requete.json();
-    const nom = propre(d.nom, 80), commune = propre(d.commune, 80);
-    if (!nom || !commune) return erreur("Nom du chantier et commune obligatoires.");
-    const c = { id: id(), nom, commune, cree: new Date().toISOString(), termine: false };
-    await modifierIndex(env, ix => { ix.chantiers.unshift(c); });
-    return json(c);
+    if (!TYPES.includes(d.type)) return erreur("Choisissez le type de travaux.");
+    if (!AVANCEMENTS.includes(d.avancement)) return erreur("Choisissez l'avancement.");
+    const e = { id: id(), type: d.type, avancement: d.avancement, commune: propre(d.commune, 60),
+      legende: propre(d.legende, 2000), date: new Date().toISOString(), par: qui, statut: "a-publier", publie: null, medias: [] };
+    await modifierIndex(env, ix => { (ix.envois ||= []).unshift(e); });
+    return json(e);
   }
 
-  let r = chemin.match(/^\/api\/chantiers\/([a-f0-9]{16})$/);
+  let r = chemin.match(/^\/api\/envois\/([a-f0-9]{16})$/);
   if (r && m === "PATCH") {
     const d = await requete.json();
-    const c = await modifierIndex(env, ix => {
-      const c = ix.chantiers.find(x => x.id === r[1]);
-      if (!c) return null;
-      if ("nom" in d) c.nom = propre(d.nom, 80) || c.nom;
-      if ("commune" in d) c.commune = propre(d.commune, 80) || c.commune;
-      if ("termine" in d) c.termine = !!d.termine;
-      return c;
+    const e = await modifierIndex(env, ix => {
+      const e = (ix.envois || []).find(x => x.id === r[1]);
+      if (!e) return null;
+      if ("legende" in d) e.legende = propre(d.legende, 2000);
+      if ("commune" in d) e.commune = propre(d.commune, 60);
+      if ("type" in d && TYPES.includes(d.type)) e.type = d.type;
+      if ("avancement" in d && AVANCEMENTS.includes(d.avancement)) e.avancement = d.avancement;
+      if ("statut" in d && STATUTS.includes(d.statut) && e.statut !== "publie") e.statut = d.statut;
+      return e;
     });
-    return c ? json(c) : erreur("Chantier introuvable.", 404);
+    return e ? json(e) : erreur("Envoi introuvable.", 404);
   }
 
-  if (chemin === "/api/medias" && m === "POST") {
+  r = chemin.match(/^\/api\/envois\/([a-f0-9]{16})\/fichiers$/);
+  if (r && m === "POST") {
     const f = await requete.formData();
     const fichier = f.get("fichier");
     if (!fichier || typeof fichier === "string") return erreur("Fichier manquant.");
     if (fichier.size > MAX_FICHIER) return erreur("Fichier trop lourd (95 Mo maximum).", 413);
     const type = fichier.type || "";
-    if (!/^(image\/(jpeg|png|webp|heic)|video\/(mp4|quicktime))$/.test(type)) return erreur("Format non pris en charge.");
-    const chantier = propre(f.get("chantier"), 16);
-    const etape = propre(f.get("etape"), 20);
-    if (!ETAPES.includes(etape)) return erreur("Étape inconnue.");
+    const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "video/quicktime": "mov" }[type];
+    if (!ext) return erreur("Format non pris en charge.");
     const { index } = await lireIndex(env);
-    if (!index.chantiers.some(c => c.id === chantier)) return erreur("Chantier inconnu.");
-    const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic", "video/mp4": "mp4", "video/quicktime": "mov" }[type];
-    const n = id();
-    const cle = `medias/${chantier}/${n}.${ext}`;
+    if (!(index.envois || []).some(e => e.id === r[1])) return erreur("Envoi inconnu.", 404);
+    const n = id(), cle = `medias/${r[1]}/${n}.${ext}`;
     await env.PHOTOS.put(cle, fichier.stream(), { httpMetadata: { contentType: type } });
-    const media = {
-      id: n, cle, chantier, etape, type: type.startsWith("video") ? "video" : "photo",
-      legende: propre(f.get("legende"), 2000), accord: f.get("accord") === "1",
-      largeur: Number(f.get("largeur")) || 0, hauteur: Number(f.get("hauteur")) || 0,
-      prise: propre(f.get("prise"), 30), ajoute: new Date().toISOString(), par: qui,
-      statut: "a-publier", publie: null,
-    };
-    await modifierIndex(env, ix => { ix.medias.unshift(media); });
+    const media = { id: n, cle, type: type.startsWith("video") ? "video" : "photo",
+      largeur: Number(f.get("largeur")) || 0, hauteur: Number(f.get("hauteur")) || 0, prise: propre(f.get("prise"), 30) };
+    await modifierIndex(env, ix => { const e = ix.envois.find(x => x.id === r[1]); if (e) e.medias.push(media); });
     return json(media);
   }
 
-  r = chemin.match(/^\/api\/medias\/([a-f0-9]{16})$/);
-  if (r && m === "PATCH") {
-    const d = await requete.json();
-    const media = await modifierIndex(env, ix => {
-      const x = ix.medias.find(y => y.id === r[1]);
-      if (!x) return null;
-      if ("legende" in d) x.legende = propre(d.legende, 2000);
-      if ("etape" in d && ETAPES.includes(d.etape)) x.etape = d.etape;
-      if ("accord" in d) x.accord = !!d.accord;
-      if ("statut" in d && STATUTS.includes(d.statut)) x.statut = d.statut;
-      return x;
-    });
-    return media ? json(media) : erreur("Photo introuvable.", 404);
-  }
-
-  r = chemin.match(/^\/f\/(medias\/[a-f0-9]{16}\/[a-f0-9]{16}\.(jpg|png|webp|heic|mp4|mov))$/);
+  r = chemin.match(/^\/f\/(medias\/[a-f0-9]{16}\/[a-f0-9]{16}\.(jpg|png|webp|mp4|mov))$/);
   if (r && m === "GET") return fichier(env, r[1], requete);
 
   return erreur("Introuvable.", 404);
@@ -190,7 +175,7 @@ async function robot(requete, env, chemin) {
     const ids = Array.isArray(d.ids) ? d.ids.map(String) : [];
     const n = await modifierIndex(env, ix => {
       let n = 0;
-      for (const x of ix.medias) if (ids.includes(x.id)) { x.statut = "publie"; x.publie = new Date().toISOString(); x.lien = propre(d.lien, 300) || x.lien; n++; }
+      for (const x of ix.envois || []) if (ids.includes(x.id)) { x.statut = "publie"; x.publie = new Date().toISOString(); x.lien = propre(d.lien, 300) || x.lien; n++; }
       return n;
     });
     return json({ ok: true, n });
@@ -222,89 +207,89 @@ const PAGE = `<!doctype html>
 <link rel="apple-touch-icon" href="/icone.png">
 <title>Photothèque Bati Azur</title>
 <style>
-:root{--bleu:#3E6398;--bleu2:#5284CB;--fond:#F4F7FB;--carte:#fff;--texte:#14202E;--gris:#6B7785;--ligne:#E3E8EF;--vert:#2E9E6A;--rouge:#C9473B}
+:root{--bleu:#3E6398;--bleu2:#5284CB;--fond:#F4F7FB;--texte:#14202E;--gris:#6B7785;--ligne:#E3E8EF;--vert:#2E9E6A}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;background:var(--fond);color:var(--texte);padding-bottom:calc(110px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,var(--bleu2),var(--bleu));color:#fff;padding:calc(14px + env(safe-area-inset-top)) 18px 14px;display:flex;align-items:center;gap:12px}
-header h1{font-size:20px;margin:0;flex:1;font-weight:700;letter-spacing:-.2px}
-header button{background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:10px;padding:7px 12px;font:inherit;font-size:14px}
-main{padding:16px;max-width:760px;margin:0 auto}
-.vide{color:var(--gris);text-align:center;padding:48px 12px}
-.titre{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--gris);margin:22px 4px 8px;font-weight:600}
-.chantiers{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.ch{background:var(--carte);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(20,32,46,.08);border:0;padding:0;text-align:left;font:inherit;color:inherit}
-.ch .im{aspect-ratio:4/3;background:#DCE5F0 center/cover no-repeat}
-.ch .tx{padding:10px 12px}
-.ch b{display:block;font-size:15px}.ch small{color:var(--gris)}
-.grille{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
-.vg{position:relative;aspect-ratio:1;background:#DCE5F0 center/cover no-repeat;border:0;padding:0;border-radius:6px;overflow:hidden}
-.vg i{position:absolute;left:4px;bottom:4px;font-style:normal;font-size:11px;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;padding:2px 6px}
-.vg.ecarte{opacity:.35}.vg.publie::after{content:"✓";position:absolute;top:4px;right:4px;background:var(--vert);color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:grid;place-items:center}
-.fab{position:fixed;left:16px;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));max-width:728px;margin:0 auto;background:var(--bleu);color:#fff;border:0;border-radius:16px;padding:17px;font:inherit;font-size:17px;font-weight:600;box-shadow:0 8px 24px rgba(62,99,152,.35)}
+body{margin:0;font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;background:var(--fond);color:var(--texte);padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+header{background:linear-gradient(180deg,var(--bleu2),var(--bleu));color:#fff;padding:calc(18px + env(safe-area-inset-top)) 20px 22px}
+header h1{font-size:26px;margin:0;font-weight:700;letter-spacing:-.3px}
+header p{margin:4px 0 0;opacity:.8;font-size:15px}
+main{padding:8px 16px;max-width:640px;margin:0 auto}
+.titre{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--gris);margin:20px 4px 10px;font-weight:600}
+.vide{color:var(--gris);text-align:center;padding:40px 16px;line-height:1.5}
+.envoi{display:flex;gap:12px;align-items:center;background:#fff;border-radius:16px;padding:10px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,32,46,.07);border:0;width:100%;text-align:left;font:inherit;color:inherit}
+.envoi .im{flex:0 0 72px;height:72px;border-radius:12px;background:#DCE5F0 center/cover no-repeat;position:relative}
+.envoi .im b{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;border-radius:8px;padding:1px 6px;font-weight:600}
+.envoi .tx{flex:1;min-width:0}
+.envoi strong{display:block;font-size:15px}
+.envoi small{display:block;color:var(--gris);font-size:13px;margin-top:2px}
+.envoi em{display:block;font-style:normal;font-size:14px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#3B4856}
+.envoi.ecarte{opacity:.45}
+.pastille{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:1px}
+.pastille.publie{background:#E3F4EC;color:var(--vert)}
+.pastille.ecarte{background:#EEE;color:var(--gris)}
+.fab{position:fixed;left:16px;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));max-width:608px;margin:0 auto;background:var(--bleu);color:#fff;border:0;border-radius:18px;padding:18px;font:inherit;font-size:18px;font-weight:600;box-shadow:0 8px 24px rgba(62,99,152,.35);display:flex;align-items:center;justify-content:center;gap:10px}
+.fab svg{width:24px;height:24px}
 .feuille{position:fixed;inset:0;z-index:20;background:rgba(10,20,35,.45);display:none;align-items:flex-end;justify-content:center}
 .feuille.ouverte{display:flex}
-.panneau{background:var(--fond);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}
-.panneau h2{margin:0 0 12px;font-size:19px;display:flex;justify-content:space-between;align-items:center}
-.panneau h2 button{border:0;background:var(--ligne);border-radius:50%;width:32px;height:32px;font-size:18px;color:var(--gris)}
-label{display:block;font-size:13px;color:var(--gris);margin:14px 2px 6px;font-weight:600}
-select,input[type=text],textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--ligne);border-radius:12px;padding:12px;background:#fff;color:var(--texte)}
-textarea{min-height:110px;resize:vertical}
+.panneau{background:var(--fond);width:100%;max-width:640px;max-height:94vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
+.panneau h2{margin:0 0 14px;font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.panneau h2 button{border:0;background:var(--ligne);border-radius:50%;width:34px;height:34px;font-size:20px;color:var(--gris)}
+.q{font-size:15px;font-weight:600;margin:18px 2px 8px}
+.q span{font-weight:400;color:var(--gris)}
 .puces{display:flex;flex-wrap:wrap;gap:8px}
-.puce{border:1px solid var(--ligne);background:#fff;border-radius:999px;padding:8px 13px;font:inherit;font-size:14px;color:var(--texte)}
+.puce{border:1.5px solid var(--ligne);background:#fff;border-radius:12px;padding:10px 14px;font:inherit;font-size:15px;color:var(--texte)}
 .puce.on{background:var(--bleu);border-color:var(--bleu);color:#fff}
-.bascule{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:12px;margin-top:14px;font-size:15px}
-.bascule input{width:22px;height:22px;accent-color:var(--vert)}
-.apercus{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px}
-.apercus div{flex:0 0 72px;height:72px;border-radius:10px;background:#DCE5F0 center/cover;position:relative}
-.apercus span{position:absolute;inset:auto 0 0 0;height:4px;background:var(--vert);transform-origin:left;transform:scaleX(0);transition:transform .2s}
-.btn{width:100%;margin-top:18px;background:var(--bleu);color:#fff;border:0;border-radius:14px;padding:15px;font:inherit;font-size:17px;font-weight:600}
+.trois{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trois .puce{text-align:center;padding:12px 6px}
+input[type=text],textarea{width:100%;font:inherit;font-size:16px;border:1.5px solid var(--ligne);border-radius:12px;padding:12px;background:#fff;color:var(--texte)}
+textarea{min-height:96px;resize:vertical}
+.apercus{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px}
+.apercus div{flex:0 0 76px;height:76px;border-radius:12px;background:#DCE5F0 center/cover;position:relative;overflow:hidden}
+.apercus div small{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--gris)}
+.apercus span{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--vert);transform-origin:left;transform:scaleX(0);transition:transform .25s}
+.date{font-size:13px;color:var(--gris);margin:14px 2px 0}
+.btn{width:100%;margin-top:16px;background:var(--bleu);color:#fff;border:0;border-radius:14px;padding:16px;font:inherit;font-size:17px;font-weight:600}
 .btn:disabled{opacity:.5}
-.btn.second{background:#fff;color:var(--bleu);border:1px solid var(--ligne);margin-top:10px}
-.lien{background:none;border:0;color:var(--bleu);font:inherit;font-size:15px;padding:6px 2px}
-.grand{width:100%;border-radius:14px;background:#000;max-height:55vh;object-fit:contain;display:block}
-.etat{display:flex;gap:8px;margin-top:6px}.etat .puce{flex:1;text-align:center}
-.info{font-size:13px;color:var(--gris);margin-top:8px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));background:#14202E;color:#fff;border-radius:12px;padding:10px 16px;font-size:14px;z-index:30;display:none}
-.retour{display:flex;align-items:center;gap:8px;margin:0 0 4px}
-.retour h3{margin:0;font-size:20px;flex:1}
+.btn.second{background:#fff;color:var(--texte);border:1.5px solid var(--ligne);margin-top:10px;font-weight:500}
+.galerie{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.galerie img,.galerie video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:#000;display:block}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(100px + env(safe-area-inset-bottom));background:#14202E;color:#fff;border-radius:12px;padding:10px 16px;font-size:15px;z-index:30;display:none;white-space:nowrap}
 </style>
 </head>
 <body>
-<header><h1>Photothèque</h1><button id="b-maj" aria-label="Actualiser">Actualiser</button></header>
+<header><h1>Photothèque</h1><p>Photos et vidéos des chantiers Bati Azur</p></header>
 <main id="vue"><p class="vide">Chargement…</p></main>
-<button class="fab" id="b-ajout">Ajouter des photos ou vidéos</button>
+<button class="fab" id="b-ajout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.5"/></svg>Ajouter des photos</button>
 <input type="file" id="fichiers" accept="image/*,video/*" multiple hidden>
 
 <div class="feuille" id="f-ajout"><div class="panneau">
-  <h2>Nouvel envoi <button data-fermer>×</button></h2>
+  <h2><span id="a-titre">Nouvel envoi</span><button data-fermer aria-label="Fermer">×</button></h2>
   <div class="apercus" id="apercus"></div>
-  <label for="a-chantier">Chantier</label>
-  <select id="a-chantier"></select>
-  <div id="nouveau" hidden>
-    <label for="n-nom">Nom du chantier (privé, jamais publié)</label>
-    <input type="text" id="n-nom" placeholder="Ex. Dupont — piscine 8×4" autocomplete="off">
-    <label for="n-commune">Commune (affichée dans les publications)</label>
-    <input type="text" id="n-commune" placeholder="Ex. Yzeure" autocomplete="off">
-  </div>
-  <label>Étape</label>
-  <div class="puces" id="a-etapes"></div>
-  <label for="a-legende">Légende</label>
-  <textarea id="a-legende" placeholder="Ce qu'on voit, en quelques mots : dimensions, revêtement, équipements, difficulté du terrain, ce que le client voulait… (le micro du clavier marche très bien)"></textarea>
-  <label class="bascule">Le client est d'accord pour publier <input type="checkbox" id="a-accord"></label>
-  <p class="info">Les photos sont réduites et la position GPS est retirée avant l'envoi. Le nom du client n'est jamais publié.</p>
+  <div class="q">Quels travaux ?</div>
+  <div class="puces" id="a-type"></div>
+  <div class="q">Où en est le chantier ?</div>
+  <div class="trois" id="a-avancement"></div>
+  <div class="q">Légende <span>(facultatif)</span></div>
+  <textarea id="a-legende" placeholder="Ex. Coque 8×4, membrane gris clair, margelles ton pierre, terrain en pente…"></textarea>
+  <div class="q">Commune <span>(facultatif)</span></div>
+  <input type="text" id="a-commune" placeholder="Ex. Yzeure" autocomplete="off">
+  <p class="date" id="a-date"></p>
   <button class="btn" id="a-envoyer">Envoyer</button>
 </div></div>
 
-<div class="feuille" id="f-media"><div class="panneau" id="p-media"></div></div>
+<div class="feuille" id="f-envoi"><div class="panneau" id="p-envoi"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
-const ETAPES = [["avant","Avant travaux"],["terrassement","Terrassement"],["gros-oeuvre","Gros œuvre"],["revetement","Membrane / revêtement"],["mise-en-eau","Mise en eau"],["termine","Terminé"],["detail","Détail / matière"],["entretien","Entretien / SAV"],["equipe","Équipe / magasin"]];
-const NOM_ETAPE = Object.fromEntries(ETAPES);
-let IX = { chantiers: [], medias: [] }, ouvert = null, choisis = [], etape = "termine";
+const TYPES = [["coque","Piscine coque"],["beton","Piscine béton"],["renovation","Rénovation"],["terrasse","Terrasse / dalle"],["entretien","Entretien / SAV"],["equipement","Équipement"],["autre","Autre"]];
+const AVANCEMENTS = [["avant","Avant"],["travaux","Travaux"],["termine","Terminé"]];
+const NOM = Object.fromEntries([...TYPES, ...AVANCEMENTS]);
+let ENVOIS = [], choisis = [], choix = { type: "", avancement: "" };
 const $ = s => document.querySelector(s);
 const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const url = m => "/f/" + m.cle;
+const quand = d => { const x = new Date(d), j = new Date(); const memeJour = x.toDateString() === j.toDateString();
+  return (memeJour ? "Aujourd'hui" : x.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })) + " à " + x.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); };
 function toast(t){ const e=$("#toast"); e.textContent=t; e.style.display="block"; clearTimeout(toast.t); toast.t=setTimeout(()=>e.style.display="none",2600); }
 
 async function appel(chemin, options = {}) {
@@ -314,73 +299,56 @@ async function appel(chemin, options = {}) {
   if (!r.ok) throw new Error(d.erreur || "Erreur " + r.status);
   return d;
 }
-async function charger(){ IX = await appel("/api/index"); rendre(); }
+async function charger(){ ENVOIS = (await appel("/api/index")).envois; rendre(); }
 
 function rendre(){
   const v = $("#vue");
-  if (ouvert) {
-    const c = IX.chantiers.find(x => x.id === ouvert);
-    const ms = IX.medias.filter(m => m.chantier === ouvert);
-    v.innerHTML = '<div class="retour"><button class="lien" id="b-retour">‹ Chantiers</button></div>'
-      + '<div class="retour"><h3>' + esc(c.nom) + '</h3></div><p class="info">' + esc(c.commune) + ' · ' + ms.length + ' fichier' + (ms.length>1?'s':'') + (c.termine ? ' · terminé' : '') + '</p>'
-      + (ms.length ? '<div class="grille">' + ms.map(m => '<button class="vg ' + m.statut + '" data-m="' + m.id + '" style="background-image:url(' + (m.type==="photo"?url(m):"") + ')">' + (m.type==="video"?'<video src="'+url(m)+'#t=0.5" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>':'') + '<i>' + esc(NOM_ETAPE[m.etape]||m.etape) + '</i></button>').join("") + '</div>' : '<p class="vide">Rien encore pour ce chantier.</p>')
-      + '<button class="btn second" id="b-termine">' + (c.termine ? "Rouvrir le chantier" : "Marquer le chantier terminé") + '</button>';
-    $("#b-retour").onclick = () => { ouvert = null; rendre(); };
-    $("#b-termine").onclick = async () => { await appel("/api/chantiers/" + c.id, { method:"PATCH", headers:{"content-type":"application/json"}, body: JSON.stringify({ termine: !c.termine }) }); await charger(); };
-    v.querySelectorAll("[data-m]").forEach(b => b.onclick = () => ouvrirMedia(b.dataset.m));
-    return;
-  }
-  if (!IX.chantiers.length) { v.innerHTML = '<p class="vide">Aucun chantier pour l\\'instant.<br>Commencez par « Ajouter des photos ».</p>'; return; }
-  const bloc = (titre, liste) => liste.length ? '<div class="titre">' + titre + '</div><div class="chantiers">' + liste.map(c => {
-    const ms = IX.medias.filter(m => m.chantier === c.id), p = ms.find(m => m.type === "photo");
-    return '<button class="ch" data-c="' + c.id + '"><div class="im" style="background-image:url(' + (p ? url(p) : "") + ')"></div><div class="tx"><b>' + esc(c.nom) + '</b><small>' + esc(c.commune) + ' · ' + ms.length + '</small></div></button>';
-  }).join("") + '</div>' : "";
-  v.innerHTML = bloc("En cours", IX.chantiers.filter(c => !c.termine)) + bloc("Terminés", IX.chantiers.filter(c => c.termine));
-  v.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { ouvert = b.dataset.c; rendre(); scrollTo(0,0); });
+  if (!ENVOIS.length) { v.innerHTML = '<p class="vide">Rien pour l\\'instant.<br>Appuyez sur « Ajouter des photos » pour envoyer celles d\\'un chantier.</p>'; return; }
+  v.innerHTML = '<div class="titre">Derniers envois</div>' + ENVOIS.map(e => {
+    const p = e.medias.find(m => m.type === "photo");
+    const pastille = e.statut === "publie" ? '<span class="pastille publie">Publié</span>' : e.statut === "ecarte" ? '<span class="pastille ecarte">Pas publié</span>' : '';
+    return '<button class="envoi ' + e.statut + '" data-e="' + e.id + '"><div class="im" style="background-image:url(' + (p ? url(p) : "") + ')"><b>' + e.medias.length + '</b></div><div class="tx"><strong>' + esc(NOM[e.type]) + ' · ' + esc(NOM[e.avancement]) + pastille + '</strong><small>' + quand(e.date) + (e.commune ? ' · ' + esc(e.commune) : '') + '</small>' + (e.legende ? '<em>' + esc(e.legende) + '</em>' : '') + '</div></button>';
+  }).join("");
+  v.querySelectorAll("[data-e]").forEach(b => b.onclick = () => ouvrir(b.dataset.e));
 }
 
-function ouvrirMedia(mid){
-  const m = IX.medias.find(x => x.id === mid);
-  const p = $("#p-media");
-  p.innerHTML = '<h2>' + esc(NOM_ETAPE[m.etape]) + ' <button data-fermer>×</button></h2>'
-    + (m.type === "video" ? '<video class="grand" src="' + url(m) + '" controls playsinline></video>' : '<img class="grand" src="' + url(m) + '" alt="">')
-    + '<label>Étape</label><div class="puces" id="m-etapes">' + ETAPES.map(([k,n]) => '<button class="puce' + (k===m.etape?' on':'') + '" data-e="' + k + '">' + n + '</button>').join("") + '</div>'
-    + '<label for="m-legende">Légende</label><textarea id="m-legende">' + esc(m.legende) + '</textarea>'
-    + '<label class="bascule">Le client est d\\'accord pour publier <input type="checkbox" id="m-accord"' + (m.accord?' checked':'') + '></label>'
-    + '<label>Publication</label><div class="etat">' + [["a-publier","À publier"],["ecarte","Ne pas publier"]].map(([k,n]) => '<button class="puce' + (k===m.statut?' on':'') + '" data-s="' + k + '">' + n + '</button>').join("") + '</div>'
-    + (m.statut === "publie" ? '<p class="info">Publié le ' + new Date(m.publie).toLocaleDateString("fr-FR") + '.</p>' : '')
-    + '<button class="btn" id="m-ok">Enregistrer</button>';
-  let e = m.etape, s = m.statut;
-  p.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { e = b.dataset.e; p.querySelectorAll("[data-e]").forEach(x => x.classList.toggle("on", x === b)); });
-  p.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { s = b.dataset.s; p.querySelectorAll("[data-s]").forEach(x => x.classList.toggle("on", x === b)); });
-  $("#m-ok").onclick = async () => {
-    const corps = { etape: e, legende: $("#m-legende").value, accord: $("#m-accord").checked };
-    if (m.statut !== "publie") corps.statut = s;
-    await appel("/api/medias/" + m.id, { method:"PATCH", headers:{"content-type":"application/json"}, body: JSON.stringify(corps) });
-    fermer(); toast("Enregistré"); await charger();
-  };
-  $("#f-media").classList.add("ouverte");
+function puces(boite, liste, cle){
+  boite.innerHTML = liste.map(([k,n]) => '<button class="puce' + (choix[cle]===k?' on':'') + '" data-k="' + k + '">' + n + '</button>').join("");
+  boite.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { choix[cle] = b.dataset.k; boite.querySelectorAll("[data-k]").forEach(x => x.classList.toggle("on", x === b)); });
+}
+
+function ouvrir(eid){
+  const e = ENVOIS.find(x => x.id === eid), p = $("#p-envoi");
+  choix = { type: e.type, avancement: e.avancement };
+  p.innerHTML = '<h2>' + quand(e.date) + '<button data-fermer aria-label="Fermer">×</button></h2>'
+    + '<div class="galerie">' + e.medias.map(m => m.type === "video" ? '<video src="' + url(m) + '" controls playsinline preload="metadata"></video>' : '<img src="' + url(m) + '" alt="" loading="lazy">').join("") + '</div>'
+    + '<div class="q">Quels travaux ?</div><div class="puces" id="e-type"></div>'
+    + '<div class="q">Où en est le chantier ?</div><div class="trois" id="e-avancement"></div>'
+    + '<div class="q">Légende</div><textarea id="e-legende">' + esc(e.legende) + '</textarea>'
+    + '<div class="q">Commune</div><input type="text" id="e-commune" value="' + esc(e.commune) + '">'
+    + '<button class="btn" id="e-ok">Enregistrer</button>'
+    + (e.statut === "publie" ? '' : '<button class="btn second" id="e-statut">' + (e.statut === "ecarte" ? "Autoriser la publication" : "Ne pas publier ces photos") + '</button>');
+  puces($("#e-type"), TYPES, "type"); puces($("#e-avancement"), AVANCEMENTS, "avancement");
+  const maj = async corps => { await appel("/api/envois/" + e.id, { method:"PATCH", headers:{"content-type":"application/json"}, body: JSON.stringify(corps) }); fermer(); toast("Enregistré"); await charger(); };
+  $("#e-ok").onclick = () => maj({ ...choix, legende: $("#e-legende").value, commune: $("#e-commune").value });
+  if ($("#e-statut")) $("#e-statut").onclick = () => maj({ statut: e.statut === "ecarte" ? "a-publier" : "ecarte" });
+  $("#f-envoi").classList.add("ouverte");
 }
 
 function fermer(){ document.querySelectorAll(".feuille").forEach(f => f.classList.remove("ouverte")); }
 document.addEventListener("click", ev => { if (ev.target.matches("[data-fermer]") || ev.target.classList.contains("feuille")) fermer(); });
 
-/* --- ajout --- */
 $("#b-ajout").onclick = () => $("#fichiers").click();
-$("#b-maj").onclick = () => charger().then(() => toast("À jour"));
 $("#fichiers").onchange = ev => {
   choisis = [...ev.target.files]; ev.target.value = "";
   if (!choisis.length) return;
-  $("#apercus").innerHTML = choisis.map((f, i) => '<div id="ap' + i + '" style="background-image:url(' + (f.type.startsWith("image") ? URL.createObjectURL(f) : "") + ')">' + (f.type.startsWith("video") ? '<small style="position:absolute;top:26px;left:0;right:0;text-align:center;font-size:12px">vidéo</small>' : '') + '<span></span></div>').join("");
-  const sel = $("#a-chantier");
-  sel.innerHTML = IX.chantiers.filter(c => !c.termine).map(c => '<option value="' + c.id + '">' + esc(c.nom) + ' — ' + esc(c.commune) + '</option>').join("") + '<option value="+">+ Nouveau chantier</option>';
-  if (ouvert) sel.value = ouvert;
-  sel.onchange = () => $("#nouveau").hidden = sel.value !== "+";
-  sel.onchange();
-  $("#a-etapes").innerHTML = ETAPES.map(([k,n]) => '<button class="puce' + (k===etape?' on':'') + '" data-e="' + k + '">' + n + '</button>').join("");
-  $("#a-etapes").querySelectorAll("[data-e]").forEach(b => b.onclick = () => { etape = b.dataset.e; $("#a-etapes").querySelectorAll("[data-e]").forEach(x => x.classList.toggle("on", x === b)); });
-  $("#a-legende").value = ""; $("#a-accord").checked = false;
-  $("#a-envoyer").disabled = false; $("#a-envoyer").textContent = "Envoyer " + choisis.length + " fichier" + (choisis.length>1?"s":"");
+  choix = { type: "", avancement: "" };
+  $("#a-titre").textContent = choisis.length + (choisis.length > 1 ? " fichiers" : " fichier");
+  $("#apercus").innerHTML = choisis.map((f, i) => '<div id="ap' + i + '" style="background-image:url(' + (f.type.startsWith("image") ? URL.createObjectURL(f) : "") + ')">' + (f.type.startsWith("video") ? '<small>vidéo</small>' : '') + '<span></span></div>').join("");
+  puces($("#a-type"), TYPES, "type"); puces($("#a-avancement"), AVANCEMENTS, "avancement");
+  $("#a-legende").value = ""; $("#a-commune").value = "";
+  $("#a-date").textContent = "Date ajoutée automatiquement : " + quand(new Date());
+  const b = $("#a-envoyer"); b.disabled = false; b.textContent = "Envoyer";
   $("#f-ajout").classList.add("ouverte");
 };
 
@@ -391,41 +359,35 @@ async function reduire(f){
   const c = document.createElement("canvas");
   c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
   c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-  const blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.88));
-  return { blob, largeur: c.width, hauteur: c.height };
+  return { blob: await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.88)), largeur: c.width, hauteur: c.height };
 }
 
 $("#a-envoyer").onclick = async () => {
+  if (!choix.type) return toast("Choisissez le type de travaux");
+  if (!choix.avancement) return toast("Choisissez où en est le chantier");
   const b = $("#a-envoyer"); b.disabled = true;
   try {
-    let chantier = $("#a-chantier").value;
-    if (chantier === "+") {
-      const nom = $("#n-nom").value.trim(), commune = $("#n-commune").value.trim();
-      if (!nom || !commune) { toast("Nom et commune du chantier"); b.disabled = false; return; }
-      chantier = (await appel("/api/chantiers", { method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({ nom, commune }) })).id;
-    }
+    const e = await appel("/api/envois", { method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({ ...choix, legende: $("#a-legende").value, commune: $("#a-commune").value }) });
     let n = 0;
     for (const [i, f] of choisis.entries()) {
-      b.textContent = "Envoi " + (i+1) + " / " + choisis.length + "…";
+      b.textContent = "Envoi " + (i+1) + " sur " + choisis.length + "…";
       const fd = new FormData();
       if (f.type.startsWith("image")) {
         const r = await reduire(f);
         fd.append("fichier", new File([r.blob], "photo.jpg", { type: "image/jpeg" }));
         fd.append("largeur", r.largeur); fd.append("hauteur", r.hauteur);
       } else {
-        if (f.size > 95 * 1024 * 1024) { toast("Vidéo trop lourde : " + f.name); continue; }
+        if (f.size > 95 * 1024 * 1024) { toast("Vidéo trop lourde (95 Mo max)"); continue; }
         fd.append("fichier", f);
       }
-      fd.append("chantier", chantier); fd.append("etape", etape);
-      fd.append("legende", $("#a-legende").value); fd.append("accord", $("#a-accord").checked ? "1" : "0");
       fd.append("prise", f.lastModified ? new Date(f.lastModified).toISOString() : "");
-      await appel("/api/medias", { method: "POST", body: fd });
+      await appel("/api/envois/" + e.id + "/fichiers", { method: "POST", body: fd });
       const s = document.querySelector("#ap" + i + " span"); if (s) s.style.transform = "scaleX(1)";
       n++;
     }
-    fermer(); ouvert = chantier; toast(n + " fichier" + (n>1?"s":"") + " envoyé" + (n>1?"s":""));
-    await charger();
-  } catch (e) { if (e.message !== "connexion") toast(e.message); b.disabled = false; b.textContent = "Réessayer"; }
+    fermer(); toast("C'est envoyé, merci !"); await charger();
+  } catch (err) { if (err.message !== "connexion") toast(err.message); b.disabled = false; b.textContent = "Réessayer"; }
 };
 
 charger().catch(e => { if (e.message !== "connexion") $("#vue").innerHTML = '<p class="vide">' + esc(e.message) + '</p>'; });
