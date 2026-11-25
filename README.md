@@ -17,6 +17,11 @@ Un seul Worker Cloudflare (`hub-batiazur`) :
   (`suivi…/c/…`) et les routes du robot (`/api/depot`, `/api/repondu`,
   `/api/courrier…`, protégées par leur jeton).
 
+- **Implantation, moteur de rendu GPU** : `public/outils/implantation/rendu-gl.js`
+  est servi sous `implantation…/rendu-gl.js` et ajouté à la page par le portail.
+  Après une modification, augmenter `RENDU_IMPLANTATION` dans `src/portail.js`
+  (l'outil garde ses fichiers en cache). `?rendu=cpu` force l'ancien moteur.
+
 La session (cookie `portail`, 30 jours) vaut pour le domaine et ses
 sous-domaines. Changer de mot de passe déconnecte tous les appareils.
 

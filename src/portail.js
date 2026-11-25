@@ -129,6 +129,17 @@ function iconesBatiAzur(reponse) {
     .transform(reponse);
 }
 
+/** Ajoute le moteur de rendu GPU a la page de l'Implantation. Le numero de
+ *  version est dans l'adresse : le service worker de l'outil garde ses
+ *  fichiers en cache sans limite, une nouvelle version doit donc changer d'URL. */
+const RENDU_IMPLANTATION = "1.1";
+function renduImplantation(reponse) {
+  if (!(reponse.headers.get("content-type") || "").includes("text/html")) return reponse;
+  return new HTMLRewriter()
+    .on("body", { element: e => e.append(`<script src="/rendu-gl.js?v=${RENDU_IMPLANTATION}"></script>`, { html: true }) })
+    .transform(reponse);
+}
+
 function retourSur(valeur) {
   try {
     const u = new URL(valeur);
@@ -454,9 +465,17 @@ export default {
       return new Response(JSON.stringify({ erreur: "non connecte" }),
         { status: 401, headers: { "content-type": "application/json" } });
     }
+    // Implantation : moteur de rendu sur carte graphique (novembre 2026). Il est
+    // servi par le portail et ajoute a la page, sans toucher au code de l'outil.
+    if (sous === "implantation" && chemin === "/rendu-gl.js") {
+      const r = await env.ASSETS.fetch(new Request(`https://${DOMAINE}/outils/implantation/rendu-gl.js`));
+      return new Response(r.body, { status: r.status,
+        headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "private, max-age=86400" } });
+    }
     propre.set("x-portail", env.SECRET_PORTAIL);
     propre.set("x-portail-email", qui);
-    return iconesBatiAzur(await outil.fetch(new Request(requete, { headers: propre })));
+    const page = iconesBatiAzur(await outil.fetch(new Request(requete, { headers: propre })));
+    return sous === "implantation" ? renduImplantation(page) : page;
   },
 
   // Toutes les 15 minutes : bilan du matin et nouvelles demandes (app.js).
