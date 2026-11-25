@@ -282,6 +282,9 @@ vec3 dryWall(vec2 P, float above){
   float v=mix(1., 1.-smoothstep(-pen,pen,sdPool(P-uSunDir.xy*tUp+nW.xy*.004)), uShK);
   float ndl=max(dot(nW,-uSunDir),0.);
   c*=nose*(vec3(.6)+uSunLit*.6*v*ndl);
+  // bande mouillée juste au-dessus de l'eau : le clapotis la tient humide
+  float wet=1.-smoothstep(0.,.035,above);
+  c*=1.-.2*wet;
   if(uLampN>0){
     vec3 lit=lampLight(P,-above*.5,vec3(-g,0.),0.);
     c+=uLiner*lit*.5*(1.-t)*uLampGain;
@@ -307,7 +310,7 @@ vec3 coping(vec2 X, float s){
     // rustique bullée : alvéoles franches de 3 à 12 mm, ombrées sur le bord opposé au soleil
     float b=cell(X*48.), b2=cell(X*120.+7.3);
     float pit=1.-smoothstep(.62,1.,b), pit2=1.-smoothstep(.55,1.,b2);
-    n-=pit*24.+pit2*11.;
+    n-=pit*30.+pit2*14.;
     vec2 e=vec2(.002,0.);
     vec2 gb=vec2(cell((X+e.xy)*48.)-b, cell((X+e.yx)*48.)-b)/e.x;
     bump+=gb*.0045*pit;
@@ -319,8 +322,9 @@ vec3 coping(vec2 X, float s){
   c+=vec3(sv,sv*.97,sv*.9);
   float fr=fract(es/SLAB), dJ=min(fr,1.-fr)*SLAB;
   float dEdge=min(dJ, mitre*.5);
-  const float J=.007;
-  if(dEdge<J){ float m=1.-dEdge/J; c=mix(c,uCopJ,m); c*=1.-.18*m; }
+  const float J=.008;
+  if(dEdge<J){ float m=1.-dEdge/J; c=mix(c,uCopJ,m); c*=1.-.2*m; }
+  else if(dEdge<J+.006) c*=1.+.05*uSunLit;           // arête chanfreinée de la dalle
   vec3 U=vec3(0.,0.,-uDn);
   vec3 N=normalize(U+vec3(bump,0.));
   float lit=mix(.95, .58+.52*max(dot(N,-uSunDir),0.), uSunLit);
@@ -460,6 +464,11 @@ vec3 water(vec2 X){
     col+=lampGlow(X,T,td,path)*uLampGain*lk;
   }
   col*=uExpo;
+
+  // ligne d'eau : ménisque clair contre la paroi, puis l'ombre douce du débord
+  float dw=-sdPool(X);
+  col*=1.-.18*(1.-smoothstep(0.,.06,dw));
+  col+=vec3(28.,30.,32.)*(1.-smoothstep(0.,.008,dw))*(.4+.6*uSunLit);
 
   // reflet (Fresnel) puis spéculaire du soleil
   vec3 R=reflect(V,N);
@@ -630,7 +639,7 @@ function analyse(){
 let out2d=null;
 const STRIP=160;          // rangées par appel : évite le chien de garde GPU des tablettes
 
-function gpuRender(){
+function gpuRender(ss){
   cam=buildCam();
   stats();
   job=null;
@@ -721,7 +730,7 @@ function gpuRender(){
   u3f('uTint', lk.tint.map(v=>mix(1,v,.45*k)));
   u1f('uLift', lk.lift*.85*k);
   u1f('uGrain', mix(1.6, lk.grain, k));
-  u1i('uSS', interacting?1:3);
+  u1i('uSS', ss);
   u1f('uTime', 0);
 
   gl.viewport(0,0,Wd,Hd);
@@ -736,6 +745,9 @@ function gpuRender(){
     gl.flush();
   }
   gl.disable(gl.SCISSOR_TEST);
+  // lecture d'un pixel : force la fin du calcul, ce qui permet de le chronométrer
+  const px=new Uint8Array(4);
+  gl.readPixels(x0, Hd-y1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
 
   if(!out2d||out2d.width!==Wd||out2d.height!==Hd){
     out2d=document.createElement('canvas'); out2d.width=Wd; out2d.height=Hd;
@@ -750,11 +762,30 @@ function gpuRender(){
 const cpuStart=startRender;
 let lost=false;
 glc.addEventListener('webglcontextlost', e=>{ e.preventDefault(); lost=true; console.warn('[rendu GPU] contexte perdu : retour au moteur d\'origine'); render(); });
+/* Qualité adaptée à l'appareil : 9 échantillons par pixel sur un ordinateur,
+   4 si le rendu complet dépasse ~0,2 s (tablette, vieux téléphone). Quand un
+   rendu complet est lent, on montre d'abord un aperçu (1 échantillon) puis la
+   version finale juste après : l'écran réagit tout de suite. */
+let qual=3, lastFull=0, jeton=0;
+function plein(){
+  const t0=performance.now();
+  gpuRender(qual);
+  lastFull=performance.now()-t0;
+  if(qual===3 && lastFull>220) qual=2;
+  else if(qual===2 && lastFull<70) qual=3;
+}
 startRender=function(){
   if(lost || window.__renduGPU.actif===false) return cpuStart();
-  try{ gpuRender(); }
+  try{
+    const j=++jeton;
+    if(interacting){ gpuRender(1); return; }
+    if(lastFull>120){
+      gpuRender(1);
+      setTimeout(()=>{ if(j===jeton && !interacting && !lost) try{ plein(); }catch(e){ console.error('[rendu GPU]', e); } }, 30);
+    } else plein();
+  }
   catch(e){ console.error('[rendu GPU]', e); lost=true; cpuStart(); }
 };
-window.__renduGPU={actif:true, version:'1.0'};
+window.__renduGPU={actif:true, version:'1.1', qualite:()=>({qual, lastFull:Math.round(lastFull)})};
 if(photo&&pts) render();
 })();
