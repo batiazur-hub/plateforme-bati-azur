@@ -14,12 +14,13 @@
     "bleu": "#5284CB",
     "jaune": "#FFBE00",
     "bleu_profond": "#3E6398",
-    "encre": "#14202E"
+    "encre": "#14202E",
+    "marron": "#CB703B"
   },
   "police": "Quicksand (arrondie, comme le logo) — 500 pour le texte, 700 pour les titres",
   "motif": "Monogramme « ba » répété dans les quatre sens, en jaune (#FFBE00) ; à utiliser en fond discret ou en bande",
   "regles": [
-    "Quatre couleurs seulement : crème #FDFAEF, bleu #5284CB, bleu profond #3E6398, jaune #FFBE00 (accent, chiffres clés, motif).",
+    "Cinq couleurs : crème #FDFAEF, bleu #5284CB, bleu profond #3E6398, jaune #FFBE00 (accent, chiffres clés, motif), marron #CB703B (magasin, annonces, chaleur).",
     "Logo en blanc sur fond bleu, en bleu sur fond crème ; jamais déformé ni recoloré.",
     "Coins arrondis, formes douces, à l'image de la police ; pas d'ombres lourdes.",
     "Écrire « Bati Azur » sans accent. Téléphone : 04 70 34 21 96.",
@@ -28,7 +29,7 @@
   ],
   "visuels_deja_publies": {
     "meteo": "Story 9:16 en dégradé bleu, grande température, cartes translucides, filtration conseillée en jaune : à garder, aux couleurs officielles.",
-    "annonce_horaires": "Visuel terre cuite « Ça change ! » : hors charte, ne pas reprendre ces couleurs.",
+    "annonce_horaires": "Visuel marron #CB703B « Ça change ! » avec cartes crème : dans la charte, à reprendre pour les annonces du magasin.",
     "monogramme": "« ba » crème sur dégradé bleu : avatar."
   }
 }
