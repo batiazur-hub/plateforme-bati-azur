@@ -1,47 +1,34 @@
 {
-  "_source": "Relevé le 25/11/2026 sur le logo (public/marque) et les visuels déjà publiés sur la page Facebook Bati Azur Piscine (story météo, annonce des horaires, monogramme ba).",
+  "_source": "Charte graphique officielle Bati Azur (marque/charte-graphique.pdf, novembre 2026) + logos fournis par Clément.",
   "nom": "Bati Azur",
   "signature": "piscines bati azur",
   "logos": {
-    "bleu": "public/marque/logo-bleu.png",
-    "blanc": "public/marque/logo-blanc.png",
-    "noir": "public/marque/logo-noir.png",
-    "monogramme": "« ba » crème sur dégradé bleu (photo de profil Facebook)"
+    "blanc": "marque/logo-blanc.png",
+    "bleu": "marque/logo-bleu.png",
+    "noir": "marque/logo-noir.png",
+    "embleme_blanc": "marque/embleme-blanc.png",
+    "embleme_bleu": "marque/embleme-bleu.png"
   },
   "couleurs": {
-    "bleu_logo": "#4682C7",
-    "bleu_clair": "#7ABAE6",
-    "bleu_moyen": "#5081C6",
+    "creme": "#FDFAEF",
+    "bleu": "#5284CB",
+    "jaune": "#FFBE00",
     "bleu_profond": "#3E6398",
-    "bleu_nuit": "#2C4F80",
-    "creme": "#FDFBEE",
-    "creme_carte": "#F5E8D7",
-    "terre_cuite": "#CB703B",
-    "terre_cuite_sombre": "#AA6337",
-    "brun_texte": "#8A4A22",
-    "jaune_valeur": "#F5B81C",
     "encre": "#14202E"
   },
-  "degrades": {
-    "ciel": ["#7ABAE6", "#5081C6", "#436499"],
-    "monogramme": ["#4481D2", "#3763A0"]
-  },
-  "typo": {
-    "texte": "Nunito (arrondie, comme le logo) — 600 à 900",
-    "titres_annonces": "serif très gras type DM Serif Display / Fraunces (annonce « Ça change ! »)",
-    "chiffres_cles": "Nunito 900, très grand (température, durée de filtration)"
-  },
-  "styles_existants": {
-    "meteo": "Story 9:16, dégradé ciel, grande température en haut, cartes translucides en bas (villes, filtration conseillée en jaune), petite mention « Automatisez avec PoolCommand ».",
-    "annonce": "Carré terre cuite, logo blanc en haut à gauche, titre serif crème, trois cartes crème arrondies, bandeau bas plus sombre avec le téléphone, grand cercle décoratif en bas à droite.",
-    "monogramme": "« ba » crème arrondi sur dégradé bleu, sert d'avatar."
-  },
+  "police": "Quicksand (arrondie, comme le logo) — 500 pour le texte, 700 pour les titres",
+  "motif": "Monogramme « ba » répété dans les quatre sens, en jaune (#FFBE00) ; à utiliser en fond discret ou en bande",
   "regles": [
-    "Bleu = la piscine, l'eau, la technique. Terre cuite = le magasin, les annonces, la vie de l'entreprise.",
-    "Fonds pleins ou dégradés doux, coins arrondis (16 à 24 px), cartes translucides ou crème ; pas d'ombres lourdes.",
-    "Logo toujours présent, en blanc sur fond coloré, en bleu sur fond clair.",
+    "Quatre couleurs seulement : crème #FDFAEF, bleu #5284CB, bleu profond #3E6398, jaune #FFBE00 (accent, chiffres clés, motif).",
+    "Logo en blanc sur fond bleu, en bleu sur fond crème ; jamais déformé ni recoloré.",
+    "Coins arrondis, formes douces, à l'image de la police ; pas d'ombres lourdes.",
     "Écrire « Bati Azur » sans accent. Téléphone : 04 70 34 21 96.",
     "Aucun nom de client, aucune adresse ; la commune seulement si elle est donnée.",
     "Pas de photo de banque d'images présentée comme une réalisation."
-  ]
+  ],
+  "visuels_deja_publies": {
+    "meteo": "Story 9:16 en dégradé bleu, grande température, cartes translucides, filtration conseillée en jaune : à garder, aux couleurs officielles.",
+    "annonce_horaires": "Visuel terre cuite « Ça change ! » : hors charte, ne pas reprendre ces couleurs.",
+    "monogramme": "« ba » crème sur dégradé bleu : avatar."
+  }
 }
