@@ -123,7 +123,7 @@ async function api(requete, env, chemin, qui) {
     if (!fichier || typeof fichier === "string") return erreur("Fichier manquant.");
     if (fichier.size > MAX_FICHIER) return erreur("Fichier trop lourd (95 Mo maximum).", 413);
     const type = fichier.type || "";
-    const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "video/quicktime": "mov" }[type];
+    const ext = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic", "image/heif": "heic", "video/mp4": "mp4", "video/quicktime": "mov" }[type];
     if (!ext) return erreur("Format non pris en charge.");
     const { index } = await lireIndex(env);
     if (!(index.envois || []).some(e => e.id === r[1])) return erreur("Envoi inconnu.", 404);
@@ -135,7 +135,7 @@ async function api(requete, env, chemin, qui) {
     return json(media);
   }
 
-  r = chemin.match(/^\/f\/(medias\/[a-f0-9]{16}\/[a-f0-9]{16}\.(jpg|png|webp|mp4|mov))$/);
+  r = chemin.match(/^\/f\/(medias\/[a-f0-9]{16}\/[a-f0-9]{16}\.(jpg|png|webp|heic|mp4|mov))$/);
   if (r && m === "GET") return fichier(env, r[1], requete);
 
   return erreur("Introuvable.", 404);
@@ -373,10 +373,15 @@ $("#a-envoyer").onclick = async () => {
     for (const [i, f] of choisis.entries()) {
       b.textContent = "Envoi " + (i+1) + " sur " + choisis.length + "…";
       const fd = new FormData();
-      if (f.type.startsWith("image")) {
-        const r = await reduire(f);
-        fd.append("fichier", new File([r.blob], "photo.jpg", { type: "image/jpeg" }));
-        fd.append("largeur", r.largeur); fd.append("hauteur", r.hauteur);
+      if (f.type.startsWith("image") || /\\.(heic|heif)$/i.test(f.name)) {
+        // iPhone : Safari lit le HEIC et on le convertit en JPEG ici. Si le
+        // navigateur ne sait pas le lire, on envoie l'original : le robot le
+        // convertira de son cote.
+        const r = await reduire(f).catch(() => null);
+        if (r) {
+          fd.append("fichier", new File([r.blob], "photo.jpg", { type: "image/jpeg" }));
+          fd.append("largeur", r.largeur); fd.append("hauteur", r.hauteur);
+        } else fd.append("fichier", new File([f], "photo.heic", { type: "image/heic" }));
       } else {
         if (f.size > 95 * 1024 * 1024) { toast("Vidéo trop lourde (95 Mo max)"); continue; }
         fd.append("fichier", f);
