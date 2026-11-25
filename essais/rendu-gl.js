@@ -71,8 +71,9 @@ uniform vec3 uTint; uniform float uLift, uGrain;
 uniform int uSS;
 uniform float uTime;
 
-const vec3 ABS  = vec3(0.46, 0.105, 0.055);
-const vec3 SCAT = vec3(26., 104., 116.);
+const vec3 ABS  = vec3(0.46, 0.115, 0.06);
+// diffusion dans la masse d'eau : faible dans une eau claire, sinon l'eau paraît laiteuse
+const vec3 SCAT = vec3(9., 46., 58.);
 const float SLAB = 0.50;
 
 /* ---------- bruits ---------- */
@@ -378,9 +379,12 @@ vec3 water(vec2 X){
   float dist=length(Wp-uC);
   vec3 sw3=surf(X, uWav*.055);
   vec2 mg=micro(X)*uWav*.012*clamp(1.4-dist/18.,0.,1.);
+  // les micro-rides cassent le reflet, mais brouilleraient le fond : la
+  // réfraction ne suit que la houle
   vec3 N=normalize(vec3(-sw3.x-mg.x, -sw3.y-mg.y, -dn));
+  vec3 Nt=normalize(vec3(-sw3.x*.8, -sw3.y*.8, -dn));
   float cosI=-dot(V,N);
-  vec3 T=refract(V,N,1./1.333);
+  vec3 T=refract(V,Nt,1./1.333);
   if(dot(T,T)<.5) T=V;
   float td=T.z*dn;
   if(td<1e-4){ td=1e-4; T=vec3(T.xy, dn*1e-4); }
@@ -450,8 +454,10 @@ vec3 water(vec2 X){
   vec3 col=base*a+SCAT*(1.-a);
 
   if(uLampN>0){
-    col+=uLiner*lampLight(P,hitD,Nl,path)*uLampGain;
-    col+=lampGlow(X,T,td,path)*uLampGain;
+    // en plein jour un projecteur ne se voit presque pas
+    float lk=mix(1.,.15,uSunLit);
+    col+=uLiner*lampLight(P,hitD,Nl,path)*uLampGain*lk;
+    col+=lampGlow(X,T,td,path)*uLampGain*lk;
   }
   col*=uExpo;
 
@@ -465,7 +471,7 @@ vec3 water(vec2 X){
     float pen=.01+.03*t2;
     float sv=mix(1., 1.-smoothstep(-pen,pen,sdPool(X-uSunDir.xy*t2)), uShK);
     float d=max(dot(normalize(R),-uSunDir),0.);
-    float spec=(pow(d,90.)*190.+pow(d,1200.)*1600.)*mix(.35,1.45,uRefl)*uSunLit*sv;
+    float spec=(pow(d,260.)*70.+pow(d,2400.)*1400.)*mix(.35,1.45,uRefl)*uSunLit*sv;
     col+=spec*vec3(1.,1.01,1.03);
   }
   return col; }
