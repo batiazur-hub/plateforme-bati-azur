@@ -40,6 +40,269 @@ try {
   sel.value = '3';
 } catch(e) { console.warn('[rendu GPU] coloris non mis à jour', e); }
 
+
+/* ---------- escaliers et catalogue Mondial Piscine ----------
+   Chaque escalier est converti en relief du fond (une grille de 2 cm, comme
+   les coques Aboral relevées sur plan). Toutes les formes deviennent alors
+   possibles — trapèze, marches carrées, pan coupé, première marche large —
+   sans formule d'intersection propre à chacune, et le même relief sert au
+   moteur d'origine comme au moteur GPU. */
+const ESCALIERS = [
+  ['Volée seule', [
+    ['droit','Droit, largeur au choix'],
+    ['droit_coin','Droit en coin'],
+    ['large','Droit, pleine largeur'],
+    ['large1','Toute largeur, large première marche'],
+    ['trapeze','Trapèze centré'],
+    ['trapeze_large','Trapèze sur toute la largeur'],
+    ['roman','Roman (marches arrondies)'],
+    ['oblique','Oblique sur la longueur'],
+  ]],
+  ['D’angle', [
+    ['angle','D’angle, quart de rond'],
+    ['angle_pan','D’angle, marches droites en pan coupé'],
+    ['angle_carre','D’angle, marches carrées'],
+    ['angle2','Deux escaliers d’angle'],
+  ]],
+  ['Avec banquette', [
+    ['banq','Banquette seule'],
+    ['banq_droit','Banquette + escalier droit'],
+    ['banq_angle','Banquette + escalier d’angle quart de rond'],
+    ['banq_angle_pan','Banquette + escalier d’angle pan coupé'],
+    ['banq_angle2','Banquette + deux escaliers d’angle'],
+  ]],
+  ['Autre', [
+    ['plage','Plage immergée'],
+    ['non','Aucun'],
+  ]],
+];
+try {
+  const sel=$('esc'), cur=sel.value;
+  sel.innerHTML='';
+  for(const [g,items] of ESCALIERS){
+    const og=document.createElement('optgroup'); og.label=g;
+    for(const [v,t] of items) og.appendChild(new Option(t,v));
+    sel.appendChild(og);
+  }
+  sel.value=cur||'droit';
+  // choix du coin pour les escaliers d'angle (vu depuis le bassin, face à la paroi)
+  const side=$('escSide');
+  const lab=document.createElement('label'); lab.textContent='Coin'; lab.id='escCoinL';
+  const coin=document.createElement('select'); coin.id='escCoin';
+  coin.appendChild(new Option('Coin de gauche','1')); coin.appendChild(new Option('Coin de droite','2'));
+  side.after(lab, coin);
+  coin.onchange=()=>render();
+} catch(e) { console.warn('[escaliers]', e); }
+
+/* Mondial Piscine construit sur mesure : les dimensions ci-dessous sont des
+   tailles courantes de chaque gamme, à ajuster au projet. Profondeurs et
+   escaliers d'après les descriptifs du fabricant. */
+const MONDIAL = [
+  // Classic'Ô : double fond 1,10 / 1,40 m
+  {id:'mp-classico-angle', n:"Classic'Ô — escalier d'angle confort", fam:"Mondial Piscine — Classic'Ô", L:8, W:4, ps:1.1, pd:1.4, shape:'rect', fond:'compose', esc:'angle_pan', side:3, nM:4, run:30, rise:25},
+  {id:'mp-classico-large', n:"Classic'Ô — toute largeur", fam:"Mondial Piscine — Classic'Ô", L:8, W:4, ps:1.1, pd:1.4, shape:'rect', fond:'compose', esc:'large1', side:3, nM:3, run:30, rise:27, bqW:0.7},
+  {id:'mp-classico-banq', n:"Classic'Ô — angle + banquette", fam:"Mondial Piscine — Classic'Ô", L:8, W:4, ps:1.1, pd:1.4, shape:'rect', fond:'compose', esc:'banq_angle_pan', side:3, nM:4, run:30, rise:25, bqW:0.5, bqD:40},
+  // Privilegi'Ô : droit de 2 ou 3 m
+  {id:'mp-privilegio-8', n:"Privilegi'Ô — droit 2 m", fam:"Mondial Piscine — Privilegi'Ô", L:8, W:4, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'droit', side:3, nM:4, run:30, rise:24, w:2},
+  {id:'mp-privilegio-10', n:"Privilegi'Ô — droit 3 m", fam:"Mondial Piscine — Privilegi'Ô", L:10, W:5, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'droit', side:3, nM:4, run:30, rise:24, w:3},
+  // Perfect'Ô : roman de 2 ou 3 m, sur la largeur ou la longueur
+  {id:'mp-perfecto-larg', n:"Perfect'Ô — roman 2 m sur la largeur", fam:"Mondial Piscine — Perfect'Ô", L:8, W:4, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'roman', side:3, nM:4, run:25, rise:24},
+  {id:'mp-perfecto-long', n:"Perfect'Ô — roman 3 m sur la longueur", fam:"Mondial Piscine — Perfect'Ô", L:10, W:5, ps:1.5, pd:1.5, shape:'rect', fond:'plat', esc:'roman', side:0, nM:4, run:37, rise:24},
+  // Convivi'Ô : deux paliers 1,15 / 1,45 m
+  {id:'mp-convivio', n:"Convivi'Ô — roman", fam:"Mondial Piscine — Convivi'Ô", L:9, W:4, ps:1.15, pd:1.45, shape:'rect', fond:'compose', esc:'roman', side:3, nM:4, run:25, rise:24},
+  // Authentic'Ô : entièrement arrondie
+  {id:'mp-authentico', n:"Authentic'Ô — toute largeur", fam:"Mondial Piscine — Authentic'Ô", L:8, W:4, ps:1.2, pd:1.5, shape:'round', rr:35, fond:'compose', esc:'large1', side:3, nM:3, run:30, rise:27, bqW:0.7},
+  // Trapèze
+  {id:'mp-prestigio', n:"Prestigi'Ô — trapèze toute largeur", fam:"Mondial Piscine — Prestigi'Ô / Confort'Ô", L:10, W:5, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'trapeze_large', side:3, nM:4, run:30, rise:24},
+  {id:'mp-conforto', n:"Confort'Ô — trapèze centré", fam:"Mondial Piscine — Prestigi'Ô / Confort'Ô", L:8, W:4, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'trapeze', side:3, nM:4, run:30, rise:24, w:2.4},
+  // Elegance'Ô, Evasi'Ô, Jopi'Ô
+  {id:'mp-eleganceo', n:"Elegance'Ô — oblique sur la longueur", fam:"Mondial Piscine — Elegance'Ô / Evasi'Ô / Jopi'Ô", L:10, W:4, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'oblique', side:0, nM:4, run:30, rise:24, w:3},
+  {id:'mp-evasio', n:"Evasi'Ô — roman en coin", fam:"Mondial Piscine — Elegance'Ô / Evasi'Ô / Jopi'Ô", L:8, W:4, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'angle', side:3, nM:4, run:30, rise:24},
+  {id:'mp-jopio', n:"Jopi'Ô — droit en coin", fam:"Mondial Piscine — Elegance'Ô / Evasi'Ô / Jopi'Ô", L:8, W:4, ps:1.2, pd:1.5, shape:'rect', fond:'compose', esc:'droit_coin', side:3, nM:4, run:30, rise:24, w:1.5},
+  // Mini'Ô : banquette avec 40 cm d'eau, accès par échelle
+  {id:'mp-minio', n:"Mini'Ô — banquette", fam:"Mondial Piscine — Mini'Ô", L:4, W:2.5, ps:1.2, pd:1.2, shape:'rect', fond:'plat', esc:'banq', side:3, bqW:0.5, bqD:40},
+  // Florida : escalier d'angle 4 marches, 1,40 m d'eau
+  ...[[4,2.5],[6,3],[7,3],[7,4],[8,4]].map(([L,W])=>({id:`mp-florida-${L}x${W}`, n:`Florida ${W} × ${L}`, fam:'Mondial Piscine — Florida', L, W, ps:1.4, pd:1.4, shape:'rect', fond:'plat', esc:'angle_pan', side:3, nM:4, run:30, rise:25})),
+  // Chron'Ô : couloir de nage
+  ...[12,15].map(L=>({id:`mp-chrono-${L}`, n:`Chron'Ô — couloir ${L} × 3 m`, fam:"Mondial Piscine — Chron'Ô", L, W:3, ps:1.5, pd:1.5, shape:'rect', fond:'plat', esc:'large1', side:3, nM:3, run:30, rise:27, bqW:0.7})),
+];
+try {
+  MODELS.push(...MONDIAL);
+  const sel=$('model'), cur=sel.value;
+  sel.innerHTML='';
+  sel.appendChild(new Option('Sur mesure',''));
+  let fam=null, grp=null;
+  for(const m of MODELS){
+    const f = m.id.startsWith('mp-') ? m.fam : 'Aboral — '+m.fam;
+    if(f!==fam){ fam=f; grp=document.createElement('optgroup'); grp.label=f; sel.appendChild(grp); }
+    grp.appendChild(new Option(`${m.n} — ${m.L} × ${m.W} m`, m.id));
+  }
+  sel.value=cur;
+} catch(e) { console.warn('[catalogue]', e); }
+
+// réglages propres aux modèles Mondial, que applyModel ne connaît pas
+const applyModel0 = applyModel;
+applyModel = function(m){
+  if(m && m.id && m.id.startsWith('mp-')){
+    if(m.nM) $('escN').value=m.nM;
+    if(m.w)  $('escW').value=m.w;
+    if(m.bqD){ $('bqD').value=m.bqD; $('bqDV').textContent=m.bqD; }
+    if(m.side!==undefined) $('escSide').value=String(m.side);
+    if($('escCoin')) $('escCoin').value=String(m.coin||1);
+  }
+  applyModel0(m);
+  if(m && m.id && m.id.startsWith('mp-'))
+    $('mnote').innerHTML += ' Mondial Piscine fait du sur-mesure : ajuste les dimensions au projet.';
+};
+
+// champs utiles selon l'escalier ; la « largeur d'assise » sert aussi de
+// profondeur de première marche pour l'escalier toute largeur
+escFields = function(){
+  const t=$('esc').value;
+  const show=(el,on)=>{ if(el) el.style.display = on ? '' : 'none'; };
+  const banq=/banq|plage/.test(t), first=t==='large1';
+  show($('escBanq'), banq||first);
+  show($('bqD'), banq); show($('bqD').previousElementSibling, banq);
+  const lab=$('bqW').previousElementSibling;
+  if(lab && lab.firstChild) lab.firstChild.nodeValue = first ? 'Profondeur de la 1re marche ' : 'Largeur d’assise ';
+  show($('escVolee'), t!=='non' && t!=='banq' && t!=='plage');
+  show($('escSide'), t!=='non');
+  show($('escSide').previousElementSibling, t!=='non');
+  show($('escW').parentElement, ['droit','droit_coin','banq_droit','trapeze','oblique'].includes(t));
+  const coin=['droit_coin','oblique','angle','angle_pan','angle_carre','banq_angle','banq_angle_pan'].includes(t);
+  show($('escCoin'), coin); show($('escCoinL'), coin);
+};
+escFields();
+
+/* Relief du fond : profondeur sous la ligne d'eau, cellule par cellule. */
+let releve=null, releveId=null, stairKey='', stairGrid=null;
+const loadGeometry0 = loadGeometry;
+loadGeometry = async function(id){
+  await loadGeometry0(id);
+  releveId=id||null; releve=grid;
+};
+function stairParts(L,W){
+  const type=$('esc').value;
+  if(type==='non') return [];
+  const side=+$('escSide').value, SL=(side%2===0)?L:W;
+  const n=clamp(Math.round(+$('escN').value),1,8);
+  const run=clamp(+$('escR').value,15,60)/100, rise=clamp(+$('escH').value,10,40)/100;
+  const w=clamp(+$('escW').value,0.6,SL);
+  const bqW=clamp(+$('bqW').value,0.2,3), bqD=clamp(+$('bqD').value,10,90)/100;
+  const mk=o=>Object.assign({side,SL,kind:'droit',uc:SL/2,w,n,run,rise,first:0,tl:0,tr:0,corner:0},o);
+  const banquette=()=>mk({n:1,run:bqW,rise:bqD,w:SL});
+  const cn=+(($('escCoin')||{}).value||1), co=cn===2?SL:0;
+  const T=0.32;                                   // trapèze : rétrécissement par côté et par mètre
+  switch(type){
+    case 'droit':          return [mk({})];
+    case 'droit_coin':     return [mk({uc:cn===2?SL-w/2:w/2})];
+    case 'large':          return [mk({w:SL})];
+    case 'large1':         return [mk({w:SL, first:bqW})];
+    case 'trapeze':        return [mk({tl:T,tr:T})];
+    case 'trapeze_large':  return [mk({w:SL,tl:T,tr:T})];
+    case 'roman':          return [mk({kind:'rond'})];
+    case 'oblique':        return [mk({kind:'oblique',corner:cn})];
+    case 'angle':          return [mk({kind:'rond',uc:co,corner:cn})];
+    case 'angle_pan':      return [mk({kind:'pan',corner:cn})];
+    case 'angle_carre':    return [mk({kind:'carre',corner:cn})];
+    case 'angle2':         return [mk({kind:'rond',uc:0,corner:1}), mk({kind:'rond',uc:SL,corner:2})];
+    case 'banq':           return [banquette()];
+    case 'banq_droit':     return [banquette(), mk({})];
+    case 'banq_angle':     return [banquette(), mk({kind:'rond',uc:co,corner:cn})];
+    case 'banq_angle_pan': return [banquette(), mk({kind:'pan',corner:cn})];
+    case 'banq_angle2':    return [banquette(), mk({kind:'rond',uc:0,corner:1}), mk({kind:'rond',uc:SL,corner:2})];
+    case 'plage':          return [mk({n:1,run:bqW*2,rise:bqD,w:SL})];
+    default:               return [mk({})];
+  }
+}
+// profondeur d'une volée au point local (u le long de la paroi, v vers l'intérieur), ou -1
+function partDepth(p,u,v){
+  if(v<0) return -1;
+  let m;
+  const reach = p.first ? p.first+(p.n-1)*p.run : p.n*p.run;
+  switch(p.kind){
+    case 'rond':
+      m=Math.hypot(u-p.uc,v);
+      if(p.corner && (u<0||u>p.SL)) return -1;
+      break;
+    case 'carre': case 'pan': {
+      const uu=u;                                 // coin au début de la paroi
+      if(uu<0) return -1;
+      m = p.kind==='carre' ? Math.max(uu,v) : (uu+v)/Math.SQRT2;
+      break;
+    }
+    case 'oblique': {
+      if(u<0||u>p.w) return -1;
+      m = v + (u/p.w)*reach*0.55;                 // nez de marche en biais
+      break;
+    }
+    default: {
+      m=v;
+      const du=u-p.uc;
+      if(du < -(p.w/2-m*p.tl) || du > p.w/2-m*p.tr) return -1;
+    }
+  }
+  if(m>reach) return -1;
+  let k = p.first ? (m<p.first ? 0 : 1+Math.floor((m-p.first)/p.run)) : Math.floor(m/p.run);
+  k=Math.min(k,p.n-1);
+  return (k+1)*p.rise;
+}
+function localOf(side,L,W,X,Y){
+  switch(side){ case 0: return [X,Y]; case 1: return [Y,L-X]; case 2: return [L-X,W-Y]; default: return [W-Y,X]; }
+}
+function buildStairGrid(L,W){
+  const C=GRID_CELL, gw=Math.max(2,Math.ceil(L/C)), gh=Math.max(2,Math.ceil(W/C));
+  const d=new Float32Array(gw*gh);
+  const ps=+$('dPs').value, pd=+$('dPd').value, fond=$('fond').value;
+  const parts=stairParts(L,W);
+  // escalier calé sur le coin de droite : même calcul, abscisse en miroir
+  for(const p of parts) if(p.corner===2) p.mir=Object.assign({},p,{uc:p.SL-p.uc});
+  const base=X=>{
+    const t=clamp(X/L,0,1);
+    switch(fond){
+      case 'plat':  return ps;
+      case 'pente': return mix(ps,pd,t);
+      case 'fosse': return t<.6 ? ps : mix(ps,pd,smoothstep(clamp((t-.6)/.22,0,1)));
+      default:      return mix(ps,pd,smoothstep(clamp((t-.35)/.45,0,1)));
+    }
+  };
+  let maxD=0;
+  for(let j=0;j<gh;j++){
+    const Y=(j+.5)*C;
+    for(let i=0;i<gw;i++){
+      const X=(i+.5)*C;
+      let D=base(X);
+      for(const p of parts){
+        const [u,v]=localOf(p.side,L,W,X,Y);
+        // escalier d'angle côté fin de paroi : on le traite en miroir
+        const uu = p.corner===2 ? p.SL-u : u;
+        const s=partDepth(p.mir||p, uu, v);
+        if(s>0 && s<D) D=s;
+      }
+      d[j*gw+i]=D; if(D>maxD) maxD=D;
+    }
+  }
+  return {w:gw,h:gh,d,base:maxD};
+}
+// appelé avant chaque rendu, une fois la caméra connue (longueur et largeur
+// peuvent être permutées par « Pivoter »)
+function prepStairs(c){
+  if(!c) return;
+  const id=$('model').value;
+  if(id && id===releveId && releve){ grid=releve; return; }
+  roundR=+$('rr').value/100;
+  const key=[c.L,c.W,$('shape').value,$('rr').value,$('fond').value,$('dPs').value,$('dPd').value,
+             $('esc').value,$('escSide').value,$('escN').value,$('escR').value,$('escH').value,$('escW').value,
+             $('bqW').value,$('bqD').value,($('escCoin')||{}).value].join('|');
+  if(key!==stairKey){ stairGrid=buildStairGrid(c.L,c.W); stairKey=key; }
+  grid=stairGrid;
+}
+window.__prepStairs=prepStairs;
+{
+  const start0=startRender;
+  startRender=function(){ try{ prepStairs(buildCam()); }catch(e){ console.warn('[escaliers]', e); } return start0(); };
+}
+
 const glc = document.createElement('canvas');
 const gl = glc.getContext('webgl2', {alpha:true, premultipliedAlpha:true, antialias:false,
                                      preserveDrawingBuffer:true, powerPreference:'high-performance'});
@@ -396,13 +659,13 @@ vec3 water(vec2 X){
   float dep, tb;
   if(uHasGrid==1){
     float hx=length(T.xy), t=0.;
-    for(int i=0;i<28;i++){
+    for(int i=0;i<72;i++){
       float Dd=depthAt(X+T.xy*t);
       if(td*t>=Dd-1e-6) break;
       float want=Dd/td;
-      t = hx>1e-6 ? min(want, t+.33/hx) : want;
+      t = hx>1e-6 ? min(want, t+.11/hx) : want;
     }
-    float lo=max(0.,t-.33/max(hx,1e-6)), hi=t;
+    float lo=max(0.,t-.11/max(hx,1e-6)), hi=t;
     for(int i=0;i<12;i++){ float md=(lo+hi)*.5; if(td*md<depthAt(X+T.xy*md)) lo=md; else hi=md; }
     tb=hi; dep=td*tb;
   } else {
@@ -427,7 +690,20 @@ vec3 water(vec2 X){
   // support : albédo, normale (monde) et occlusion ambiante
   vec3 alb=uLiner, Nw, Nl;
   float floorHere=depthAt(P), ao=1.;
-  if(onStair){
+  /* Relief en grille : le rayon peut buter sur une contremarche. On le
+     reconnaît à ce qu'il s'arrête plus bas que la marche sur laquelle il
+     tombe ; la normale suit alors la pente du relief, à l'horizontale. */
+  bool riser=false; vec2 rN=vec2(0.);
+  if(uHasGrid==1 && !onWall){
+    float e=.03;
+    vec2 g=vec2(depthAt(P+vec2(e,0.))-depthAt(P-vec2(e,0.)), depthAt(P+vec2(0.,e))-depthAt(P-vec2(0.,e)));
+    if(hitD-floorHere>.012 && length(g)>.03){ riser=true; rN=normalize(g); }
+    else if(length(g)>.03) ao=1.-.22*smoothstep(.03,.2,length(g));      // pied de contremarche
+  }
+  if(riser){
+    Nl=vec3(rN,0.); Nw=Nl;
+    ao*=1.-.25*exp(-max(depthAt(P+rN*.06)-hitD,0.)/.12);
+  } else if(onStair){
     Nl=stN; Nw=normalize(vec3(stN.xy, stN.z*dn));
     ao=1.-.22*exp(-max(floorHere-hitD,0.)/.12)*(1.-abs(stN.z));
   } else if(onWall){
@@ -644,6 +920,7 @@ function gpuRender(ss){
   stats();
   job=null;
   if(!cam){ poolCv=null; draw(); return; }
+  prepStairs(cam);
   const c=cam, L=c.L, W=c.W, shape=$('shape').value;
   roundR=+$('rr').value/100;
   for(const p of props){
@@ -786,6 +1063,6 @@ startRender=function(){
   }
   catch(e){ console.error('[rendu GPU]', e); lost=true; cpuStart(); }
 };
-window.__renduGPU={actif:true, version:'1.1', qualite:()=>({qual, lastFull:Math.round(lastFull)})};
+window.__renduGPU={actif:true, version:'1.2', qualite:()=>({qual, lastFull:Math.round(lastFull)})};
 if(photo&&pts) render();
 })();
