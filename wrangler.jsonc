@@ -16,7 +16,10 @@
     { "binding": "SUIVI", "service": "suivi-clients" },
     { "binding": "PRO", "service": "batiazuranalysepro" },
     { "binding": "BONS", "service": "dashing-torrone" },
-    { "binding": "IMPLANTATION", "service": "implatationpiscine" },
+    // Implantation : l'outil est désormais Plongéo (édition Bati Azur, novembre 2026).
+    // L'ancien outil ne sert plus que les relevés des coques Aboral (/geo/*.json).
+    { "binding": "IMPLANTATION", "service": "plongeo" },
+    { "binding": "IMPLANTATION_GEO", "service": "implatationpiscine" },
     // Analyse piscine (app publique des clients) : le portail ne fait que
     // relayer, sans connexion, et sert la nouvelle icone (novembre 2026).
     { "binding": "ANALYSE", "service": "batiazuranalyse" }
