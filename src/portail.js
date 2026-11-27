@@ -12,6 +12,7 @@
 import { EmailMessage } from "cloudflare:email";
 
 import { routeApp, planifie } from "./app.js";
+import { routeHeures } from "./heures.js";
 
 const DOMAINE = "batiazurpiscine.fr";
 const COOKIE = "portail";
@@ -439,6 +440,26 @@ export default {
     }
 
     const sous = hote.endsWith("." + DOMAINE) ? hote.slice(0, -DOMAINE.length - 1) : "";
+
+    // Relevé d'heures : servi par le portail lui-même, données dans sa base (heures.js).
+    if (sous === "heures") {
+      const ic = chemin.match(/^\/__bati\/icone-(32|180|192|512)\.png$/) ||
+                 (/^\/(favicon\.ico|apple-touch-icon(-precomposed)?\.png)$/.test(chemin) ? [0, chemin.includes("apple") ? 180 : 32] : null);
+      if (ic) {
+        const r = await env.ASSETS.fetch(new Request(`https://${DOMAINE}/icones-outils/png/heures-${ic[1]}.png`));
+        return new Response(r.body, { status: r.status, headers: { "content-type": "image/png", "cache-control": "public, max-age=604800" } });
+      }
+      const qui = await session(requete, env);
+      if (!qui) {
+        const accepte = requete.headers.get("accept") || "";
+        if (requete.method === "GET" && accepte.includes("text/html"))
+          return rediriger(`https://${DOMAINE}/connexion?retour=${encodeURIComponent(url.href)}`);
+        return new Response(JSON.stringify({ erreur: "non connecte" }),
+          { status: 401, headers: { "content-type": "application/json" } });
+      }
+      return iconesBatiAzur(await routeHeures(requete, env, qui, chemin));
+    }
+
     const outil = env[OUTILS[sous]];
     if (!outil) return new Response("Introuvable", { status: 404 });
 

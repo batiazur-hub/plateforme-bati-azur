@@ -24,6 +24,7 @@
     { id: "analyse", nom: "Analyse", url: "https://analyse.batiazurpiscine.fr/" },
     { id: "implantation", nom: "Implantation", url: "https://implantation.batiazurpiscine.fr/" },
     { id: "bons", nom: "Bons d'achat", url: "https://bons.batiazurpiscine.fr/" },
+    { id: "heures", nom: "Relevé d'heures", url: "https://heures.batiazurpiscine.fr/" },
     { id: "mails", nom: "Mails", url: "https://batiazur-hub.github.io/mail-generator-bati-azur/" },
     { id: "etiquettes", nom: "Étiquettes", url: "https://batiazur-hub.github.io/generateur-etiquettes-bati-azur/" },
     { id: "actus", nom: "Actualités", url: "https://batiazur-hub.github.io/batiazur-analyse/admin-actus.html" },

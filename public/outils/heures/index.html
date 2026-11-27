@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relevé d'heures – Bati Azur</title>
+<meta name="theme-color" content="#7A4FB5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f9;--card:#fff;--ink:#132030;--mute:#5f6d7c;--line:#e1e6ed;--soft:#eef2f6;
+  --accent:#0a7bc2;--accent-soft:#e3f0fa;--pos:#1d8a5b;--neg:#c0392b;--warn:#c27400;
+  --c-T:#2e9d6a;--c-CP:#2f7fd8;--c-CP2:#7fb2ec;--c-REC:#8a5cd1;--c-FER:#98a3ae;--c-MAL:#d6534a;--c-INT:#e39a2b;--c-FOR:#1fa3a3;--c-ABS:#46505c;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e151e;--card:#16202c;--ink:#e7edf4;--mute:#91a0b0;--line:#26333f;--soft:#1c2834;
+  --accent:#4fb0ea;--accent-soft:#163049;--pos:#4cc38a;--neg:#ef6b5b;--warn:#f0a63a;
+}}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.4}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 14px 60px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between;margin-bottom:14px}
+h1{font-size:20px;margin:0}
+.yearnav{display:flex;align-items:center;gap:6px;font-weight:700;font-size:18px}
+.sync{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.dot.ok{background:var(--pos)}.dot.busy{background:var(--warn)}.dot.err{background:var(--neg)}
+.btn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{background:none;border-color:transparent}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn.danger{color:var(--neg)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab.add{border-style:dashed;color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--soft);border-radius:12px;padding:10px 12px}
+.kpi .k{font-size:12px;color:var(--mute);font-weight:500}
+.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:11.5px;color:var(--mute)}
+.kpi.big{background:var(--accent-soft)}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+/* heatmap */
+.heat{overflow-x:auto}
+.hgrid{display:grid;grid-template-columns:42px repeat(31,minmax(22px,1fr));gap:2px;min-width:780px}
+.hm{font-size:11px;font-weight:600;color:var(--mute);display:flex;align-items:center;cursor:pointer}
+.hm.on{color:var(--accent)}
+.hd{height:24px;border-radius:4px;background:var(--soft);font-size:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.hd.we{opacity:.6}.hd.we.empty{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,transparent 3px 6px);opacity:1}.hd.none{background:transparent;cursor:default}
+.hd.today{outline:2px solid var(--ink);outline-offset:-1px}
+.hd.empty{color:var(--mute)}
+.hhead{font-size:10px;color:var(--mute);text-align:center}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:var(--mute)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+/* month */
+.months{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.mtab{font:inherit;font-size:12.5px;font-weight:600;border:0;background:var(--soft);color:var(--ink);padding:6px 10px;border-radius:8px;cursor:pointer}
+.mtab.on{background:var(--accent);color:#fff}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;color:var(--mute);font-weight:600;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.we td{background:var(--soft)}
+tr.today td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+td.dt{white-space:nowrap;font-weight:600;width:92px}
+td.dt small{display:block;font-weight:500;color:var(--mute);font-size:10.5px;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+input,select{font:inherit;font-size:13px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:5px 6px;min-width:0}
+tr.we input,tr.we select{background:var(--card)}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input[type=time]{width:100%;min-width:84px}
+select.ty{width:100%;min-width:110px;font-weight:600}
+input.dur{width:70px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+input.dur:disabled{background:transparent;border-color:transparent;color:var(--ink);opacity:1;-webkit-text-fill-color:var(--ink)}
+input.note{width:100%;min-width:120px}
+tr.wk td{background:var(--accent-soft);font-size:12.5px;padding:7px 8px;border-bottom:2px solid var(--line)}
+tr.wk b{font-variant-numeric:tabular-nums}
+.chip{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11.5px;font-weight:600;margin-left:6px}
+.chip.pos{background:color-mix(in srgb,var(--pos) 15%,transparent)}
+.chip.neg{background:color-mix(in srgb,var(--neg) 15%,transparent)}
+.chip.mute{background:var(--soft);color:var(--mute)}
+.pan{border:1px solid var(--line);background:var(--card);border-radius:7px;width:34px;height:30px;cursor:pointer;font-size:15px;color:var(--mute)}
+.pan.on{background:color-mix(in srgb,var(--warn) 16%,transparent);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.pan.forced{box-shadow:inset 0 0 0 2px var(--accent)}
+.icon{border:0;background:none;color:var(--mute);cursor:pointer;font-size:15px;padding:3px 5px;border-radius:6px}
+.icon:hover{background:var(--soft);color:var(--ink)}
+/* team */
+.tbl-scroll{overflow-x:auto}
+table.team td,table.team th{padding:8px 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.team td.n{text-align:right}
+table.team th.n{text-align:right}
+table.team tr:hover td{background:var(--soft);cursor:pointer}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(8,14,22,.55);display:none;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto;z-index:20}
+.modal.on{display:flex}
+.mbox{background:var(--card);border-radius:16px;padding:18px;max-width:640px;width:100%}
+.mbox h3{margin:0 0 12px;font-size:17px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);font-weight:500}
+label.f input,label.f select{font-size:14px;padding:7px 8px}
+label.f.full{grid-column:1/-1}
+.ht{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.help{font-size:11.5px;color:var(--mute);margin:4px 0 0}
+.mfoot{display:flex;justify-content:space-between;gap:8px;margin-top:16px;flex-wrap:wrap}
+.adj{display:grid;grid-template-columns:130px 90px 1fr 30px;gap:6px;margin-bottom:6px;align-items:center}
+.empty-state{text-align:center;padding:40px 20px;color:var(--mute)}
+.empty-state b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
+.banner{background:color-mix(in srgb,var(--warn) 14%,transparent);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);padding:9px 12px;border-radius:10px;font-size:13px;margin-bottom:12px;display:none}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--card);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30}
+.toast.on{opacity:1}
+.note-s{font-size:11.5px;color:var(--mute);margin-top:8px}
+.hide{display:none!important}
+
+@media (max-width:760px){
+  .fgrid{grid-template-columns:1fr}
+  table.month thead{display:none}
+  table.month, table.month tbody, table.month tr, table.month td{display:block;width:100%}
+  table.month tr.d{display:grid;grid-template-columns:1fr 1fr;gap:5px 8px;padding:9px 8px;border-bottom:1px solid var(--line)}
+  table.month tr.d td{border:0;padding:0;background:none}
+  table.month tr.we{background:var(--soft)}
+  table.month td.dt{grid-column:1;width:auto}
+  table.month td.c-ty{grid-column:2}
+  table.month td.c-dur{grid-column:1}
+  table.month td.c-note{grid-column:1/-1}
+  table.month td.c-pan{grid-column:2}
+  table.month td.c-act{grid-column:1/-1;text-align:right}
+  table.month td[data-l]::before{content:attr(data-l);display:block;font-size:10.5px;color:var(--mute);margin-bottom:2px}
+  table.month tr.wk td{display:block}
+  input.dur{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Relevé d'heures</h1>
+    <div class="yearnav">
+      <button class="btn ghost" id="yPrev" aria-label="Année précédente">‹</button>
+      <span id="yLbl">2026</span>
+      <button class="btn ghost" id="yNext" aria-label="Année suivante">›</button>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="sync"><span class="dot" id="syncDot"></span><span id="syncTxt">Chargement…</span></div>
+      <button class="btn" id="btnSettings">Réglages</button>
+    </div>
+  </header>
+  <div class="banner" id="banner"></div>
+  <nav class="tabs" id="tabs"></nav>
+  <main id="main"></main>
+</div>
+
+<!-- employee modal -->
+<div class="modal" id="mEmp"><div class="mbox">
+  <h3 id="mEmpTitle">Salarié</h3>
+  <div class="fgrid">
+    <label class="f full">Nom<input id="fNom" placeholder="ex. Kevin"></label>
+    <label class="f">Base contrat (h / semaine)<input id="fBase" type="number" step="0.5" min="0"></label>
+    <label class="f">Jours travaillés / semaine<input id="fJours" type="number" step="1" min="1" max="6"></label>
+    <label class="f">HS payées d'office chaque semaine (h)<input id="fHsPay" type="number" step="0.5" min="0"><span class="help">ex. 4 pour un contrat 39 h payé avec 4 h sup. Ces heures ne vont pas dans le compteur.</span></label>
+    <label class="f">Début du suivi<input id="fDebut" type="date"><span class="help">Les compteurs démarrent à cette date.</span></label>
+    <label class="f">Solde d'heures sup au départ (h)<input id="fHsInit" type="number" step="0.25"><span class="help">Heures déjà dues au salarié à la date de début (négatif s'il en doit).</span></label>
+    <label class="f">Solde de congés au départ (jours)<input id="fCpInit" type="number" step="0.5"></label>
+    <label class="f">Congés acquis par mois (jours)<input id="fCpMois" type="number" step="0.01"><span class="help">2,08 en jours ouvrés (25 j/an) · 2,5 en jours ouvrables (30 j/an).</span></label>
+    <label class="f full">Horaire type (bouton « remplir »)
+      <div class="ht"><input id="fHms" type="time"><input id="fHme" type="time"><input id="fHas" type="time"><input id="fHae" type="time"></div>
+      <span class="help">Matin début · fin · après-midi début · fin</span>
+    </label>
+    <div class="full" style="grid-column:1/-1">
+      <label class="f">Ajustements du compteur d'heures sup <span class="help">ex. « −10 h payées sur la paie de décembre »</span></label>
+      <div id="adjList" style="margin-top:6px"></div>
+      <button class="btn sm" id="adjAdd">+ Ajouter un ajustement</button>
+    </div>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="fArch"> Salarié parti (masqué des onglets, données conservées)</label>
+  </div>
+  <div class="mfoot">
+    <button class="btn danger" id="empDel">Supprimer</button>
+    <div style="display:flex;gap:8px"><button class="btn" data-close>Annuler</button><button class="btn primary" id="empSave">Enregistrer</button></div>
+  </div>
+</div></div>
+
+<!-- settings modal -->
+<div class="modal" id="mSet"><div class="mbox">
+  <h3>Réglages généraux</h3>
+  <div class="fgrid">
+    <label class="f">Seuil des heures sup à +50 % (h / semaine)<input id="sSeuil" type="number" step="0.5"><span class="help">Par défaut : +25 % de la 36ᵉ à la 43ᵉ heure, +50 % au-delà.</span></label>
+    <label class="f">Compteur d'heures sup<select id="sMaj"><option value="0">1 h sup = 1 h à récupérer</option><option value="1">Majoré (1 h à +25 % = 1 h 15 de repos)</option></select></label>
+    <label class="f">Montant d'un panier repas (€, facultatif)<input id="sPan" type="number" step="0.01" min="0" placeholder="ex. 11,40"><span class="help">Laisse vide pour ne compter que le nombre de paniers.</span></label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="sArch"> Afficher les salariés partis</label>
+  </div>
+  <p class="note-s">Calcul du compteur : chaque semaine, heures travaillées − heures dues. Les heures dues = base du contrat, diminuée des jours de congé, férié, maladie, intempéries ou absence. Une journée « Récup » ne réduit pas les heures dues : elle est donc décomptée du solde d'heures sup. Seules les semaines terminées et saisies comptent.</p>
+  <div class="mfoot"><span></span><div style="display:flex;gap:8px"><button class="btn" data-close>Annuler</button><button class="btn primary" id="setSave">Enregistrer</button></div></div>
+</div></div>
+
+<!-- copy modal -->
+<div class="modal" id="mCopy"><div class="mbox">
+  <h3 id="cpTitle">Copier les heures</h3>
+  <div class="fgrid">
+    <div class="full" style="grid-column:1/-1">
+      <label class="f">Vers</label>
+      <div id="cpTargets" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px"></div>
+    </div>
+    <label class="f full">Période
+      <select id="cpPreset"></select>
+    </label>
+    <label class="f">Du<input type="date" id="cpFrom"></label>
+    <label class="f">Au<input type="date" id="cpTo"></label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="cpOver"> Remplacer les journées déjà remplies chez le destinataire</label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="cpPerso"> Copier aussi les congés, récup, maladie et absences</label>
+  </div>
+  <p class="note-s" id="cpPreview"></p>
+  <div class="mfoot"><span></span><div style="display:flex;gap:8px"><button class="btn" data-close>Annuler</button><button class="btn primary" id="cpGo">Copier</button></div></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* Relevé d'heures sur le hub Bati Azur : les données sont gardées dans la base
+   du portail (et non plus sur Claude). Ce petit module imite l'accès aux
+   données qu'utilisait la page d'origine — collections, documents, écoute des
+   changements — en passant par /api/tout et /api/ecrire. Les changements faits
+   sur un autre appareil arrivent en moins de 20 secondes. */
+(function(){
+  const docs=new Map();            // chemin -> données
+  const ecouteurs=[];              // {type:'col'|'doc', nom, cb}
+  const erreur=c=>Object.assign(new Error(c),{code:c});
+  function snapCol(nom){
+    const pre=nom+'/';
+    const list=[...docs.entries()].filter(([k])=>k.startsWith(pre)&&!k.slice(pre.length).includes('/'))
+      .map(([k,v])=>({id:k.slice(pre.length),exists:true,data:()=>JSON.parse(JSON.stringify(v))}));
+    return {docs:list,metadata:{fromCache:false}};
+  }
+  function snapDoc(ch){const v=docs.get(ch);return {id:ch.split('/').pop(),exists:v!==undefined,data:()=>v===undefined?undefined:JSON.parse(JSON.stringify(v)),metadata:{fromCache:false}};}
+  function prevenir(){ecouteurs.forEach(e=>{try{e.cb(e.type==='col'?snapCol(e.nom):snapDoc(e.nom));}catch(x){console.error(x);}});}
+  async function appel(url,opts){
+    let r;
+    try{r=await fetch(url,Object.assign({credentials:'same-origin',cache:'no-store'},opts));}
+    catch(e){throw erreur('unavailable');}
+    if(r.status===401){location.href='https://batiazurpiscine.fr/connexion?retour='+encodeURIComponent(location.href);throw erreur('unauthenticated');}
+    if(!r.ok)throw erreur(r.status===413?'quota_exceeded':'unavailable');
+    return r.json();
+  }
+  let enAttente=0;
+  async function charger(){
+    if(enAttente)return;                     // ne pas écraser une saisie en cours d'envoi
+    const d=await appel('/api/tout');
+    const neuf=new Map(d.docs.map(x=>[x.chemin,x.donnees]));
+    const avant=JSON.stringify([...docs].sort()), apres=JSON.stringify([...neuf].sort());
+    if(avant!==apres){docs.clear();neuf.forEach((v,k)=>docs.set(k,v));prevenir();}
+  }
+  let pret=charger().catch(e=>{ecouteurs.forEach(x=>x.err&&x.err(e));});
+  setInterval(()=>{if(document.visibilityState==='visible')charger().catch(()=>{});},20000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')charger().catch(()=>{});});
+  async function ecrire(ch,donnees){
+    enAttente++;
+    try{await appel('/api/ecrire',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chemin:ch,donnees})});
+      if(donnees===null)docs.delete(ch);else docs.set(ch,JSON.parse(JSON.stringify(donnees)));}
+    finally{enAttente--;}
+  }
+  const db={
+    collection:nom=>({onSnapshot(cb,err){const e={type:'col',nom,cb,err};ecouteurs.push(e);pret.then(()=>cb(snapCol(nom)));return()=>ecouteurs.splice(ecouteurs.indexOf(e),1);}}),
+    doc:ch=>({
+      onSnapshot(cb,err){const e={type:'doc',nom:ch,cb,err};ecouteurs.push(e);pret.then(()=>cb(snapDoc(ch)));return()=>ecouteurs.splice(ecouteurs.indexOf(e),1);},
+      set:d=>ecrire(ch,d),
+      delete:()=>ecrire(ch,null),
+    }),
+  };
+  window.claude={use:async nom=>nom==='db'?db:null};
+})();
+</script>
+
+<script>
+/* ================= constants & helpers ================= */
+const TYPES={T:'Travail',CP:'Congé payé',CP2:'½ congé payé',REC:'Récup (h sup)',FER:'Férié',MAL:'Maladie / AT',INT:'Intempéries',FOR:'Formation',ABS:'Absence non payée'};
+const REDUCE_FULL=['CP','FER','MAL','INT','ABS'];
+const PERSO=['CP','CP2','REC','MAL','ABS'];
+const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const MCOURT=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+const JC=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const ymdOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parseYmd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c,12);};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const wd=d=>(d.getDay()+6)%7; // 0=lundi
+const mondayOf=d=>addDays(d,-wd(d));
+const TODAY=ymdOf(new Date());
+function toMin(t){if(!t)return null;const[h,m]=t.split(':').map(Number);return h*60+m;}
+function span(a,b){const x=toMin(a),y=toMin(b);if(x==null||y==null)return null;if(x===0&&y===0)return null;const d=y-x;return d>0?d:null;} // pas de travail de nuit : 00:00 ou fin < début = ignoré
+function fmt(min,sign){if(min==null||isNaN(min))return '—';const r=Math.round(min);const neg=r<0;const a=Math.abs(r);return (neg?'−':(sign&&a?'+':''))+Math.floor(a/60)+'h'+pad(a%60);}
+function decH(min){return (min/60).toLocaleString('fr-FR',{maximumFractionDigits:2});}
+function nb(v){return (Math.round(v*100)/100).toLocaleString('fr-FR',{maximumFractionDigits:2});}
+function num(v,def=0){const x=parseFloat(String(v??'').replace(',','.'));return isNaN(x)?def:x;}
+function parseDur(s){s=String(s||'').trim().toLowerCase().replace(/\s+/g,'');if(!s)return null;let m;
+  if(m=s.match(/^(\d+)(?:min|mn|m)$/))return +m[1];
+  if(m=s.match(/^(\d+)[h:](\d{1,2})?$/))return (+m[1])*60+(+(m[2]||0));
+  if(/^\d+(?:[.,]\d+)?$/.test(s))return Math.round(num(s)*60);return null;}
+function panE(n){const v=num(S.config.panEur,0);return v>0?(n*v).toLocaleString('fr-FR',{style:'currency',currency:'EUR'}):'';}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),1800);}
+async function copyText(s){try{await navigator.clipboard.writeText(s);toast('Copié ✔');}catch(e){toast('Copie impossible ici');}}
+
+/* jours fériés */
+const _hol={};
+function holidays(y){if(_hol[y])return _hol[y];
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+  const easter=new Date(y,mo-1,da,12);const H={};
+  const add=(d,n)=>H[ymdOf(d)]=n;
+  add(new Date(y,0,1,12),"Jour de l'an");add(addDays(easter,1),'Lundi de Pâques');add(new Date(y,4,1,12),'Fête du travail');add(new Date(y,4,8,12),'Victoire 1945');
+  add(addDays(easter,39),'Ascension');add(addDays(easter,50),'Lundi de Pentecôte');add(new Date(y,6,14,12),'Fête nationale');add(new Date(y,7,15,12),'Assomption');
+  add(new Date(y,10,1,12),'Toussaint');add(new Date(y,10,11,12),'Armistice');add(new Date(y,11,25,12),'Noël');
+  return _hol[y]=H;}
+const holName=ymd=>holidays(+ymd.slice(0,4))[ymd];
+
+/* ================= state ================= */
+const S={year:new Date().getFullYear(),view:'equipe',month:new Date().getMonth(),
+  emps:new Map(),months:new Map(),config:{seuil50:43,majore:false,showArch:false,panEur:''},
+  dirty:new Set(),backend:null,loaded:false,showWE:false};
+try{S.showWE=localStorage.getItem('releve-showWE')==='1';}catch(e){}
+
+function newEmp(nom){return {nom,base:35,jours:5,hsPay:0,debut:S.year+'-01-01',hsInit:0,cpInit:0,cpMois:2.08,ht:{ms:'08:00',me:'12:00',as:'13:30',ae:'16:30'},ajust:[],arch:false,ordre:Date.now()};}
+function empList(){return [...S.emps.entries()].map(([id,e])=>({id,...e})).filter(e=>S.config.showArch||!e.arch).sort((a,b)=>(a.ordre||0)-(b.ordre||0));}
+function monthKey(empId,ym){return empId+'_'+ym;}
+function entry(empId,ymd){const m=S.months.get(monthKey(empId,ymd.slice(0,7)));return (m&&m.jours&&m.jours[ymd.slice(8)])||null;}
+
+/* ================= persistence ================= */
+const LKEY='releve-heures-v1';
+let db=null;
+const timers=new Map(),inflight=new Map();
+function setSync(state,txt){$('syncDot').className='dot '+state;$('syncTxt').textContent=txt;}
+function schedule(path,getter,delay=700){
+  if(path.startsWith('pointages/'))S.dirty.add(path.slice(10));
+  clearTimeout(timers.get(path));
+  timers.set(path,setTimeout(()=>flush(path,getter),delay));
+  setSync('busy','Enregistrement…');
+}
+async function flush(path,getter){
+  timers.delete(path);
+  if(!db){saveLocal();done(path);return;}
+  if(inflight.get(path)){inflight.set(path,'again');return;}
+  inflight.set(path,true);
+  try{
+    const data=getter();
+    if(data===null)await db.doc(path).delete();else await db.doc(path).set(JSON.parse(JSON.stringify(data)));
+  }catch(e){
+    if(e&&e.code==='unavailable'){await new Promise(r=>setTimeout(r,800+Math.random()*800));try{const d=getter();d===null?await db.doc(path).delete():await db.doc(path).set(JSON.parse(JSON.stringify(d)));}catch(e2){fail(e2);}}
+    else fail(e);
+  }
+  const again=inflight.get(path)==='again';inflight.delete(path);
+  if(again)return flush(path,getter);
+  done(path);
+}
+function done(path){if(path.startsWith('pointages/'))S.dirty.delete(path.slice(10));if(!timers.size&&!inflight.size)setSync('ok',db?'Enregistré':'Enregistré sur cet appareil');}
+function fail(e){setSync('err','Erreur d\'enregistrement');
+  const msg=e&&e.code==='invalid_argument'?"Tu n'as pas les droits pour modifier ce tableau.":e&&e.code==='quota_exceeded'?'Espace de stockage plein.':'Enregistrement impossible pour le moment, réessaie.';
+  showBanner(msg);}
+function showBanner(m){const b=$('banner');b.textContent=m;b.style.display=m?'block':'none';}
+function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify({emps:[...S.emps],months:[...S.months],config:S.config}));}catch(e){}}
+function loadLocal(){try{const d=JSON.parse(localStorage.getItem(LKEY)||'null');if(!d)return;S.emps=new Map(d.emps||[]);S.months=new Map(d.months||[]);Object.assign(S.config,d.config||{});}catch(e){}}
+
+function saveEmp(id){schedule('employes/'+id,()=>S.emps.has(id)?S.emps.get(id):null,300);}
+function saveMonth(key){schedule('pointages/'+key,()=>{const m=S.months.get(key);return m&&Object.keys(m.jours||{}).length?m:null;});}
+function saveConfig(){schedule('config/general',()=>({seuil50:S.config.seuil50,majore:S.config.majore,showArch:S.config.showArch,panEur:S.config.panEur||''}),300);}
+
+async function initBackend(){
+  let loadTimer=setTimeout(()=>{if(!S.loaded){setSync('err','Données injoignables pour le moment');}},10000);
+  try{db=window.claude&&window.claude.use?await window.claude.use('db'):null;}catch(e){db=null;}
+  if(!db){
+    clearTimeout(loadTimer);loadLocal();S.loaded=true;
+    showBanner("Mode hors ligne : les données sont gardées uniquement dans ce navigateur. Recharge la page pour retrouver les données du hub.");
+    setSync('ok','Enregistré sur cet appareil');render();return;
+  }
+  let got={e:false,p:false,c:false};
+  const ready=()=>{if(got.e&&got.p&&got.c&&!S.loaded){S.loaded=true;clearTimeout(loadTimer);setSync('ok','Enregistré');render();}else if(S.loaded)softRender();};
+  const onErr=e=>{clearTimeout(loadTimer);setSync('err','Données indisponibles');if(e&&e.code==='revoked')showBanner('Accès aux données retiré.');};
+  db.collection('employes').onSnapshot(snap=>{
+    const m=new Map();snap.docs.forEach(d=>{if(d.exists)m.set(d.id,{...d.data()});});
+    S.emps=m;if(!snap.metadata.fromCache)got.e=true;ready();
+  },onErr);
+  db.collection('pointages').onSnapshot(snap=>{
+    const m=new Map();
+    snap.docs.forEach(d=>{if(!d.exists)return;const k=d.id;if(S.dirty.has(k)&&S.months.has(k))m.set(k,S.months.get(k));else m.set(k,JSON.parse(JSON.stringify(d.data())));});
+    S.dirty.forEach(k=>{if(!m.has(k)&&S.months.has(k))m.set(k,S.months.get(k));});
+    S.months=m;if(!snap.metadata.fromCache)got.p=true;ready();
+  },onErr);
+  db.doc('config/general').onSnapshot(snap=>{
+    if(snap.exists)Object.assign(S.config,snap.data());if(!snap.metadata.fromCache)got.c=true;ready();
+  },onErr);
+}
+
+/* ================= calculations ================= */
+function daily(emp){return (num(emp.base,35)*60)/Math.max(1,num(emp.jours,5));}
+function workedMin(e,dly){if(!e)return 0;let w=0,has=false;
+  [['ms','me'],['as','ae']].forEach(([a,b])=>{const s=span(e[a],e[b]);if(s!=null){w+=s;has=true;}});
+  if(has)return w;if(e.d)return e.d;if(e.t==='FOR')return dly;return 0;}
+function panAuto(e){if(!e||PERSO.includes(e.t)||['FER','INT'].includes(e.t))return 0;return (span(e.ms,e.me)>0&&span(e.as,e.ae)>0)?1:0;}
+function panier(e){if(!e)return 0;if(e.p==='oui')return 1;if(e.p==='non')return 0;return panAuto(e);}
+function effType(e,ymd,w){if(e&&e.t)return e.t;if(w>0)return 'T';if(holName(ymd))return 'FER';return '';}
+
+function computeWeek(empId,emp,mon){
+  const dly=daily(emp),base=num(emp.base,35)*60,jours=num(emp.jours,5);
+  let worked=0,red=0,has=false;
+  for(let i=0;i<7;i++){const d=addDays(mon,i),ymd=ymdOf(d),e=entry(empId,ymd),w=workedMin(e,dly),t=effType(e,ymd,w);
+    if(e&&(e.t||w>0))has=true;worked+=w;
+    if(i<jours){if(REDUCE_FULL.includes(t))red+=dly;else if(t==='CP2')red+=dly/2;}}
+  const due=Math.max(0,base-red),ecart=worked-due;
+  let b25=0,b50=0,p=0,bank;
+  if(ecart>0){const band=Math.max(0,(num(S.config.seuil50,43)-num(emp.base,35))*60);b25=Math.min(ecart,band);b50=ecart-b25;
+    p=Math.min(num(emp.hsPay,0)*60,ecart);const p25=Math.min(p,b25),p50=p-p25;
+    const k25=S.config.majore?1.25:1,k50=S.config.majore?1.5:1;bank=(b25-p25)*k25+(b50-p50)*k50;}
+  else bank=ecart;
+  const monY=ymdOf(mon),sunY=ymdOf(addDays(mon,6));
+  const status=sunY<TODAY?'past':(monY<=TODAY?'current':'future');
+  const thu=addDays(mon,3);
+  return {mon:monY,worked,due,ecart,b25,b50,paid:p,bank,has,status,year:thu.getFullYear(),wn:isoWeek(thu)};
+}
+function isoWeek(thu){const y=thu.getFullYear();const jan4=new Date(y,0,4,12);const m1=mondayOf(jan4);return Math.round((mondayOf(thu)-m1)/(7*864e5))+1;}
+
+function computeEmp(empId){
+  const emp=S.emps.get(empId);if(!emp)return null;
+  const deb=parseYmd(emp.debut||(S.year+'-01-01'));const start=mondayOf(deb);const todayD=parseYmd(TODAY);const curMon=mondayOf(todayD);
+  const Y=S.year;const R={solde:num(emp.hsInit)*60,yr:{worked:0,hsAcq:0,hsRec:0,paid:0,b25:0,b50:0,manque:0,nonSaisies:0},prov:null};
+  for(let mon=new Date(start);mon<=curMon;mon=addDays(mon,7)){
+    const w=computeWeek(empId,emp,mon);
+    if(w.status==='current'){if(w.has)R.prov=w;continue;}
+    if(!w.has){if(w.year===Y)R.yr.nonSaisies++;continue;}
+    R.solde+=w.bank;
+    if(w.year===Y){if(w.bank>0)R.yr.hsAcq+=w.bank;else R.yr.hsRec+=-w.bank;R.yr.paid+=w.paid;R.yr.b25+=w.b25;R.yr.b50+=w.b50;}
+  }
+  (emp.ajust||[]).forEach(a=>{if(!emp.debut||!a.date||a.date>=emp.debut)R.solde+=num(a.h)*60;});
+  // jours
+  const cnt={CP:0,REC:0,MAL:0,INT:0,ABS:0,FOR:0,FER:0,T:0};let cpAll=0;R.pan=Array(12).fill(0);const dly=daily(emp);
+  S.months.forEach((m,k)=>{if(!k.startsWith(empId+'_'))return;Object.entries(m.jours||{}).forEach(([dd,e])=>{
+    const ymd=m.mois+'-'+dd;const w=workedMin(e,dly);const t=effType(e,ymd,w);
+    if(ymd.slice(0,4)==String(Y)){R.yr.worked+=w;if(t==='CP')cnt.CP+=1;else if(t==='CP2')cnt.CP+=.5;else if(cnt[t]!=null&&t!=='T')cnt[t]++;if(w>0)cnt.T++;R.pan[+ymd.slice(5,7)-1]+=panier(e);}
+    if(!emp.debut||ymd>=emp.debut){if(t==='CP')cpAll+=1;else if(t==='CP2')cpAll+=.5;}
+  });});
+  R.cnt=cnt;R.panTot=R.pan.reduce((a,b)=>a+b,0);
+  let months=(todayD.getFullYear()-deb.getFullYear())*12+(todayD.getMonth()-deb.getMonth());if(todayD.getDate()<deb.getDate())months--;months=Math.max(0,months);
+  R.cpAcq=num(emp.cpInit)+months*num(emp.cpMois,2.08);R.cpPris=cpAll;R.cpSolde=R.cpAcq-cpAll;R.moisAcq=months;
+  return R;
+}
+
+/* ================= render ================= */
+function render(){
+  $('yLbl').textContent=S.year;
+  const list=empList();
+  if(S.view!=='equipe'&&!S.emps.has(S.view))S.view='equipe';
+  $('tabs').innerHTML=`<button class="tab ${S.view==='equipe'?'on':''}" data-v="equipe">Équipe</button>`+
+    list.map(e=>`<button class="tab ${S.view===e.id?'on':''}" data-v="${e.id}">${esc(e.nom)}${e.arch?' (parti)':''}</button>`).join('')+
+    `<button class="tab add" id="addEmp">+ Salarié</button>`;
+  if(!S.loaded){$('main').innerHTML='<div class="card empty-state">Chargement des données…</div>';return;}
+  if(S.view==='equipe')renderTeam(list);else renderEmp(S.view);
+}
+function softRender(){ // re-render without killing focus in the month table
+  const ae=document.activeElement;
+  if(ae&&ae.closest&&ae.closest('table.month')){pendingRender=true;return;}
+  render();
+}
+let pendingRender=false;
+document.addEventListener('focusout',()=>setTimeout(()=>{const ae=document.activeElement;if(pendingRender&&!(ae&&ae.closest&&ae.closest('table.month'))){pendingRender=false;render();}},50));
+
+function renderTeam(list){
+  if(!list.length){$('main').innerHTML=`<div class="card empty-state"><b>Aucun salarié pour l'instant</b>Ajoute tes gars avec le bouton « + Salarié », puis remplis leurs horaires jour par jour.<br><br><button class="btn primary" onclick="openEmp()">+ Ajouter un salarié</button></div>`;return;}
+  const rows=list.map(e=>{const r=computeEmp(e.id);return {e,r};});
+  $('main').innerHTML=`
+  <div class="card"><h2>Synthèse ${S.year} <button class="btn sm" id="copyTeam">Copier le récap</button></h2>
+  <div class="tbl-scroll"><table class="team"><thead><tr>
+    <th>Salarié</th><th class="n">Heures travaillées</th><th class="n">HS acquises</th><th class="n">Heures récupérées</th><th class="n">HS payées d'office</th>
+    <th class="n">Solde h sup à ce jour</th><th class="n">CP pris (${S.year})</th><th class="n">Solde CP</th><th class="n">Récup (j)</th><th class="n">Maladie (j)</th><th class="n">Intemp. (j)</th><th class="n">Sem. non saisies</th></tr></thead>
+  <tbody>${rows.map(({e,r})=>`<tr data-v="${e.id}">
+    <td><b>${esc(e.nom)}</b><div class="note-s" style="margin:0">${nb(num(e.base,35))} h/sem</div></td>
+    <td class="n">${fmt(r.yr.worked)}</td><td class="n pos">${fmt(r.yr.hsAcq)}</td><td class="n">${fmt(r.yr.hsRec)}</td><td class="n">${fmt(r.yr.paid)}</td>
+    <td class="n"><b class="${r.solde>=0?'pos':'neg'}">${fmt(r.solde,true)}</b>${r.prov?`<div class="note-s" style="margin:0">sem. en cours ${fmt(r.prov.bank,true)}</div>`:''}</td>
+    <td class="n">${nb(r.cnt.CP)} j</td><td class="n"><b>${nb(r.cpSolde)} j</b></td><td class="n">${r.cnt.REC}</td><td class="n">${r.cnt.MAL}</td><td class="n">${r.cnt.INT}</td>
+    <td class="n ${r.yr.nonSaisies?'neg':''}">${r.yr.nonSaisies}</td></tr>`).join('')}</tbody></table></div>
+  <p class="note-s">Clique sur un salarié pour ouvrir son tableau de l'année. « Solde h sup » = heures sup qu'il lui reste à récupérer (négatif : heures qu'il doit). « Sem. non saisies » = semaines passées sans aucune saisie, non comptées.</p></div>`;
+  const curM=parseYmd(TODAY).getFullYear()===S.year?parseYmd(TODAY).getMonth():11;
+  const totM=Array(12).fill(0);rows.forEach(({r})=>r.pan.forEach((n,i)=>totM[i]+=n));const grand=totM.reduce((a,b)=>a+b,0);
+  $('main').insertAdjacentHTML('beforeend',`<div class="card"><h2>🍴 Paniers repas ${S.year} <button class="btn sm" id="copyPan">Copier le récap paniers</button></h2>
+  <div class="tbl-scroll"><table class="team pan-t"><thead><tr><th>Salarié</th>${MCOURT.map((m,i)=>`<th class="n" style="${i===curM?'color:var(--accent)':''}">${m}</th>`).join('')}<th class="n">Total</th>${num(S.config.panEur)>0?'<th class="n">Montant</th>':''}</tr></thead>
+  <tbody>${rows.map(({e,r})=>`<tr data-v="${e.id}"><td><b>${esc(e.nom)}</b></td>${r.pan.map((n,i)=>`<td class="n" style="${i===curM?'font-weight:700;background:var(--accent-soft)':''}${n?'':';color:var(--mute)'}">${n||'·'}</td>`).join('')}<td class="n"><b>${r.panTot}</b></td>${num(S.config.panEur)>0?`<td class="n">${panE(r.panTot)}</td>`:''}</tr>`).join('')}
+  <tr><td><b>Total équipe</b></td>${totM.map((n,i)=>`<td class="n" style="${i===curM?'background:var(--accent-soft)':''}"><b>${n||'·'}</b></td>`).join('')}<td class="n"><b>${grand}</b></td>${num(S.config.panEur)>0?`<td class="n"><b>${panE(grand)}</b></td>`:''}</tr></tbody></table></div>
+  <p class="note-s">Un panier est compté automatiquement chaque jour où le salarié a travaillé le matin <b>et</b> l'après-midi avec une coupure le midi. Pas de panier pour une journée continue, une demi-journée, un congé ou une absence. Dans le tableau du mois, la case 🍴 de chaque jour permet de forcer ou retirer un panier à la main (bordure bleue = modifié à la main).${num(S.config.panEur)>0?'':' Indique le montant d\'un panier dans les Réglages pour avoir les sommes.'}</p></div>`);
+  $('copyPan').onclick=()=>{const L=[`Paniers repas ${S.year}`,''];
+    rows.forEach(({e,r})=>{const det=r.pan.map((n,i)=>n?`${MCOURT[i]} ${n}`:null).filter(Boolean).join(' · ');L.push(`${e.nom} : ${r.panTot} panier(s)${panE(r.panTot)?' = '+panE(r.panTot):''}${det?' ('+det+')':''}`);});
+    L.push('',`${MOIS[curM]} : `+rows.map(({e,r})=>`${e.nom} ${r.pan[curM]}`).join(' · '));copyText(L.join('\n'));};
+  $('copyTeam').onclick=()=>{const L=[`Récap heures ${S.year} – arrêté au ${parseYmd(TODAY).toLocaleDateString('fr-FR')}`,''];
+    rows.forEach(({e,r})=>L.push(`${e.nom} : ${fmt(r.yr.worked)} travaillées · HS acquises ${fmt(r.yr.hsAcq)} · récupérées ${fmt(r.yr.hsRec)} · solde HS ${fmt(r.solde,true)} · CP pris ${nb(r.cnt.CP)} j · solde CP ${nb(r.cpSolde)} j · maladie ${r.cnt.MAL} j · ${r.panTot} paniers`));
+    copyText(L.join('\n'));};
+}
+
+function renderEmp(id){
+  const emp=S.emps.get(id);
+  $('main').innerHTML=`
+  <div class="card"><h2><span>${esc(emp.nom)} <span class="chip mute">${nb(num(emp.base,35))} h/sem${num(emp.hsPay)?` dont ${nb(num(emp.hsPay))} h sup payées`:''}</span></span>
+    <span style="display:flex;gap:6px"><button class="btn sm" id="copyEmp">Copier le récap</button><button class="btn sm" id="editEmp">Fiche salarié</button></span></h2>
+    <div class="kpis" id="kpis"></div></div>
+  <div class="card"><h2>Vue de l'année ${S.year}</h2><div class="heat"><div class="hgrid" id="heat"></div></div>
+    <div class="legend">${Object.entries(TYPES).map(([k,l])=>`<span><i style="background:var(--c-${k})"></i>${l}</span>`).join('')}</div></div>
+  <div class="card" id="monthCard"></div>`;
+  $('editEmp').onclick=()=>openEmp(id);
+  $('copyEmp').onclick=()=>copyEmpRecap(id);
+  renderKpis(id);renderHeat(id);renderMonth(id);
+}
+function updPanMonth(id){const el=$('panMonth');if(!el)return;const r=computeEmp(id);const n=r.pan[S.month];el.innerHTML=`<span class="chip mute" style="font-size:12.5px">🍴 ${n} panier${n>1?'s':''} ce mois${panE(n)?' · '+panE(n):''}</span>`;}
+function renderKpis(id){
+  const r=computeEmp(id);if(!r)return;
+  $('kpis').innerHTML=`
+   <div class="kpi big"><div class="k">Heures sup à récupérer</div><div class="v ${r.solde>=0?'pos':'neg'}">${fmt(r.solde,true)}</div><div class="d">${r.prov?`+ semaine en cours : ${fmt(r.prov.bank,true)} (provisoire)`:'à ce jour, semaines terminées'}</div></div>
+   <div class="kpi"><div class="k">Heures travaillées ${S.year}</div><div class="v">${fmt(r.yr.worked)}</div><div class="d">${r.cnt.T} jours travaillés</div></div>
+   <div class="kpi"><div class="k">HS acquises ${S.year}</div><div class="v pos">${fmt(r.yr.hsAcq)}</div><div class="d">${r.yr.b50?`dont ${fmt(r.yr.b50)} au-delà de ${nb(num(S.config.seuil50,43))} h`:(r.yr.paid?`+ ${fmt(r.yr.paid)} payées d'office`:'&nbsp;')}</div></div>
+   <div class="kpi"><div class="k">Heures récupérées ${S.year}</div><div class="v">${fmt(r.yr.hsRec)}</div><div class="d">${r.cnt.REC} jour(s) de récup</div></div>
+   <div class="kpi big"><div class="k">Congés restants</div><div class="v">${nb(r.cpSolde)} j</div><div class="d">acquis ${nb(r.cpAcq)} j · pris ${nb(r.cpPris)} j</div></div>
+   <div class="kpi"><div class="k">Congés pris ${S.year}</div><div class="v">${nb(r.cnt.CP)} j</div><div class="d">congés payés et ½ journées</div></div>
+   <div class="kpi"><div class="k">Absences ${S.year}</div><div class="v">${r.cnt.MAL+r.cnt.INT+r.cnt.ABS} j</div><div class="d">maladie ${r.cnt.MAL} · intemp. ${r.cnt.INT} · non payées ${r.cnt.ABS}</div></div>
+   <div class="kpi"><div class="k">Paniers repas ${S.year}</div><div class="v">${r.panTot}</div><div class="d">${MOIS[S.month].toLowerCase()} : ${r.pan[S.month]}${panE(r.panTot)?' · '+panE(r.panTot)+' sur l\'année':''}</div></div>
+   ${r.yr.nonSaisies?`<div class="kpi"><div class="k">Semaines non saisies</div><div class="v neg">${r.yr.nonSaisies}</div><div class="d">non comptées dans le solde</div></div>`:''}`;
+}
+function renderHeat(id){
+  const emp=S.emps.get(id),Y=S.year,dly=daily(emp);
+  let h='<div></div>'+Array.from({length:31},(_,i)=>`<div class="hhead">${i+1}</div>`).join('');
+  for(let m=0;m<12;m++){
+    h+=`<div class="hm ${m===S.month?'on':''}" data-m="${m}">${MCOURT[m]}</div>`;
+    const nd=new Date(Y,m+1,0).getDate();
+    for(let d=1;d<=31;d++){
+      if(d>nd){h+='<div class="hd none"></div>';continue;}
+      const dt=new Date(Y,m,d,12),ymd=ymdOf(dt),e=entry(id,ymd),w=workedMin(e,dly),t=effType(e,ymd,w);
+      const we=wd(dt)>=5;let style='',txt='',cls='hd';
+      if(t){style=`background:var(--c-${t})`;if(t==='T'||w>0)txt=w?(Math.round(w/6)/10).toString().replace('.',','):'';else txt={CP:'C',CP2:'½',REC:'R',FER:'F',MAL:'M',INT:'I',FOR:'Fo',ABS:'A'}[t];}
+      else cls+=' empty';
+      if(t==='T'&&w){const k=Math.min(1,w/(dly*1.3));style=`background:color-mix(in srgb,var(--c-T) ${45+55*k}%,var(--soft))`;}
+      if(we)cls+=' we';if(ymd===TODAY)cls+=' today';
+      h+=`<div class="${cls}" style="${style}" data-m="${m}" data-day="${d}" title="${JC[wd(dt)]} ${d} ${MOIS[m]}${t?' – '+TYPES[t]:''}${w?' – '+fmt(w):''}${holName(ymd)?' – '+holName(ymd):''}">${txt}</div>`;
+    }
+  }
+  $('heat').innerHTML=h;
+}
+function rowHtml(id,emp,dt){
+  const ymd=ymdOf(dt),e=entry(id,ymd)||{},dly=daily(emp),w=workedMin(e,dly),hasT=!!(e.ms||e.me||e.as||e.ae);
+  const hol=holName(ymd),we=wd(dt)>=5,t=effType(e,ymd,w);
+  const opts=['<option value="">—</option>',...Object.entries(TYPES).map(([k,l])=>`<option value="${k}" ${e.t===k?'selected':''}>${l}</option>`)].join('');
+  const autoLbl=!e.t&&t?` (${TYPES[t]})`:'';
+  return `<tr class="d ${we?'we':''} ${ymd===TODAY?'today':''}" data-ymd="${ymd}" id="r-${ymd}">
+   <td class="dt">${JC[wd(dt)]} ${pad(dt.getDate())}${hol?`<small>${hol}</small>`:''}</td>
+   <td class="c-ty" data-l="Type"><select class="ty" data-f="t" style="${t?`color:var(--c-${t})`:''}" title="${autoLbl?'Auto : '+TYPES[t]:''}">${opts.replace('<option value="">—</option>',`<option value="">${autoLbl?'auto · '+TYPES[t]:'—'}</option>`)}</select></td>
+   <td data-l="Matin début"><input type="time" step="300" data-f="ms" value="${e.ms||''}"></td>
+   <td data-l="Matin fin"><input type="time" step="300" data-f="me" value="${e.me||''}"></td>
+   <td data-l="Aprèm début"><input type="time" step="300" data-f="as" value="${e.as||''}"></td>
+   <td data-l="Aprèm fin"><input type="time" step="300" data-f="ae" value="${e.ae||''}"></td>
+   <td class="c-dur" data-l="Total"><input class="dur" data-f="d" ${hasT?'disabled':''} value="${w?fmt(w):''}" placeholder="—" title="${hasT?'Calculé depuis les horaires':'Tape une durée (ex. 8h, 7,5) si pas d\'horaires'}"></td>
+   <td class="c-pan" data-l="Panier">${(()=>{const pv=panier(e),au=panAuto(e),forced=e.p==='oui'||e.p==='non';return `<button class="pan ${pv?'on':''} ${forced?'forced':''}" data-act="pan" title="${pv?'Panier repas':'Pas de panier'}${forced?' (forcé à la main)':' (auto : pause du midi)'} – cliquer pour changer">${pv?'🍴':'·'}</button>`;})()}</td>
+   <td class="c-note" data-l="Note / chantier"><input class="note" data-f="n" value="${esc(e.n||'')}" placeholder="Chantier, remarque…"></td>
+   <td class="c-act"><button class="icon" data-act="fill" title="Horaire type">⤓</button><button class="icon" data-act="prev" title="Même horaire que le jour précédent">↻</button><button class="icon" data-act="cp" title="Copier cette journée vers un autre salarié">⇉</button><button class="icon" data-act="clr" title="Effacer la journée">✕</button></td>
+  </tr>`;
+}
+function weekHtml(id,emp,mon,partial){
+  const w=computeWeek(id,emp,mon);
+  let s=`<b>Semaine ${w.wn}</b> · travaillé <b>${fmt(w.worked)}</b> · dû ${fmt(w.due)}`;
+  if(!w.has)s+=`<span class="chip mute">non saisie</span>`;
+  else{
+    if(w.ecart>0){s+=` · <b class="pos">${fmt(w.ecart,true)}</b>`;const det=[];if(w.b25)det.push(`${fmt(w.b25)} à +25 %`);if(w.b50)det.push(`${fmt(w.b50)} à +50 %`);if(w.paid)det.push(`${fmt(w.paid)} payées`);if(det.length)s+=` <span class="note-s">(${det.join(', ')})</span>`;}
+    else if(w.ecart<0)s+=` · <b class="neg">${fmt(w.ecart)}</b> <span class="note-s">pris sur le compteur</span>`;
+    else s+=' · pile';
+    s+=`<span class="chip ${w.bank>0?'pos':w.bank<0?'neg':'mute'}">compteur ${fmt(w.bank,true)}</span>`;
+    if(w.status==='current')s+='<span class="chip mute">en cours</span>';if(w.status==='future')s+='<span class="chip mute">à venir</span>';
+  }
+  if(partial)s+=`<span class="note-s"> · semaine à cheval sur le mois suivant</span>`;
+  return `<tr class="wk" data-wk="${ymdOf(mon)}" data-partial="${partial?1:0}"><td colspan="10">${s}</td></tr>`;
+}
+function renderMonth(id){
+  const emp=S.emps.get(id),Y=S.year,m=S.month,nd=new Date(Y,m+1,0).getDate();
+  let rows='';const jours=num(emp.jours,5);let hidden=0;
+  for(let d=1;d<=nd;d++){const dt=new Date(Y,m,d,12);
+    const off=wd(dt)>=jours&&!S.showWE&&!entry(id,ymdOf(dt));
+    if(off)hidden++;else rows+=rowHtml(id,emp,dt);
+    if(wd(dt)===6)rows+=weekHtml(id,emp,mondayOf(dt),false);else if(d===nd)rows+=weekHtml(id,emp,mondayOf(dt),true);}
+  $('monthCard').innerHTML=`
+   <div class="months">${MOIS.map((n,i)=>`<button class="mtab ${i===m?'on':''}" data-m="${i}">${MCOURT[i]}</button>`).join('')}</div>
+   <h2><span>${MOIS[m]} ${Y}</span><span id="panMonth"></span></h2>
+   <div class="tools">
+     <button class="btn sm" id="fillMonth">Remplir les jours vides (lun–ven) avec l'horaire type</button>
+     <button class="btn sm" id="fillWeek">Remplir cette semaine</button>
+     <button class="btn sm primary" id="copyTo">Copier les heures vers un autre salarié…</button>
+     <button class="btn sm" id="toggleWE">${S.showWE?'Masquer les week-ends':'Afficher les week-ends'}</button>
+   </div>
+   <table class="month"><thead><tr><th>Jour</th><th>Type</th><th>Matin début</th><th>Matin fin</th><th>Aprèm début</th><th>Aprèm fin</th><th style="text-align:right">Total</th><th>Panier</th><th>Note / chantier</th><th></th></tr></thead>
+   <tbody id="mbody">${rows}</tbody></table>
+   <p class="note-s">Les week-ends sont masqués (non travaillés). Un samedi ou dimanche où quelqu'un a travaillé reste affiché une fois saisi : utilise « Afficher les week-ends » pour le saisir. Les jours fériés sans horaire sont comptés automatiquement en « Férié ». Pour une journée sans horaire précis, tape directement la durée dans « Total » (ex. 8h ou 7,5).</p>`;
+  updPanMonth(id);
+  $('copyTo').onclick=()=>openCopy(null);
+  $('toggleWE').onclick=()=>{S.showWE=!S.showWE;try{localStorage.setItem('releve-showWE',S.showWE?'1':'0');}catch(e){}renderMonth(id);};
+  $('fillMonth').onclick=()=>fillRange(id,new Date(Y,m,1,12),new Date(Y,m,nd,12));
+  $('fillWeek').onclick=()=>{const t=parseYmd(TODAY);const base=(t.getFullYear()===Y&&t.getMonth()===m)?t:new Date(Y,m,1,12);const mon=mondayOf(base);fillRange(id,mon,addDays(mon,6));};
+}
+function refreshDerived(id){
+  renderKpis(id);renderHeat(id);updPanMonth(id);
+  const emp=S.emps.get(id);
+  document.querySelectorAll('#mbody tr.wk').forEach(tr=>{const mon=parseYmd(tr.dataset.wk);tr.outerHTML=weekHtml(id,emp,mon,tr.dataset.partial==='1');});
+}
+function refreshRow(id,ymd){
+  const tr=$('r-'+ymd);if(!tr)return;const emp=S.emps.get(id);
+  const ae=document.activeElement;const f=ae&&tr.contains(ae)?ae.dataset.f:null;
+  const tmp=document.createElement('tbody');tmp.innerHTML=rowHtml(id,emp,parseYmd(ymd));const nt=tmp.firstElementChild;
+  // keep focused element: replace cells except the focused one
+  [...nt.children].forEach((td,i)=>{const old=tr.children[i];if(f&&old.querySelector(`[data-f="${f}"]`)){
+    if(f!=='d'){const inp=old.querySelector('[data-f="d"]');}return;}old.replaceWith(td.cloneNode(true));});
+  // also update the dur cell even when focus is elsewhere in row
+  const dOld=tr.querySelector('[data-f="d"]'),dNew=nt.querySelector('[data-f="d"]');
+  if(dOld&&dNew&&ae!==dOld){dOld.value=dNew.value;dOld.disabled=dNew.disabled;}
+  const sOld=tr.querySelector('select.ty'),sNew=nt.querySelector('select.ty');if(sOld&&sNew&&ae!==sOld){sOld.outerHTML=sNew.outerHTML;}
+}
+
+/* ================= editing ================= */
+function setEntry(id,ymd,patch){
+  const key=monthKey(id,ymd.slice(0,7));
+  let m=S.months.get(key);if(!m){m={emp:id,annee:+ymd.slice(0,4),mois:ymd.slice(0,7),jours:{}};S.months.set(key,m);}
+  m.jours=m.jours||{};const dd=ymd.slice(8);const e={...(m.jours[dd]||{}),...patch};
+  Object.keys(e).forEach(k=>{if(e[k]===''||e[k]==null||e[k]===0)delete e[k];});
+  if(Object.keys(e).length)m.jours[dd]=e;else delete m.jours[dd];
+  saveMonth(key);
+}
+function fillRange(id,from,to){
+  const emp=S.emps.get(id),ht=emp.ht||{};let n=0;
+  for(let d=new Date(from);d<=to;d=addDays(d,1)){if(wd(d)>=num(emp.jours,5))continue;const ymd=ymdOf(d);if(entry(id,ymd)||holName(ymd))continue;
+    setEntry(id,ymd,{ms:ht.ms,me:ht.me,as:ht.as,ae:ht.ae});n++;}
+  render();toast(n?`${n} jour(s) remplis`:'Aucun jour vide à remplir');
+}
+document.addEventListener('change',ev=>{
+  const el=ev.target;const tr=el.closest&&el.closest('#mbody tr.d');if(!tr)return;
+  const id=S.view,ymd=tr.dataset.ymd,f=el.dataset.f;let v=el.value;
+  if(f==='d'){const m=parseDur(v);if(v&&m==null){toast('Durée non comprise (ex. 8h, 7h30, 7,5)');return;}v=m||'';}
+  setEntry(id,ymd,{[f]:v});refreshRow(id,ymd);refreshDerived(id);
+});
+document.addEventListener('click',ev=>{
+  const t=ev.target;
+  const tab=t.closest('.tab[data-v]');if(tab){S.view=tab.dataset.v;render();return;}
+  if(t.id==='addEmp'){openEmp();return;}
+  const teamRow=t.closest('table.team tr[data-v]');if(teamRow){S.view=teamRow.dataset.v;render();return;}
+  const mt=t.closest('[data-m]');if(mt&&(mt.classList.contains('mtab')||mt.classList.contains('hm')||mt.classList.contains('hd'))&&!mt.classList.contains('none')){
+    S.month=+mt.dataset.m;renderMonth(S.view);renderHeat(S.view);renderKpis(S.view);
+    if(mt.dataset.day){const ymd=S.year+'-'+pad(S.month+1)+'-'+pad(+mt.dataset.day);if(!$('r-'+ymd)){S.showWE=true;renderMonth(S.view);}const r=$('r-'+ymd);if(r){r.scrollIntoView({behavior:'smooth',block:'center'});const i=r.querySelector('input[type=time]');i&&setTimeout(()=>i.focus(),350);}}
+    else $('monthCard').scrollIntoView({behavior:'smooth',block:'start'});return;}
+  const act=t.closest('[data-act]');if(act){const tr=act.closest('tr.d');const id=S.view,ymd=tr.dataset.ymd,emp=S.emps.get(id);
+    if(act.dataset.act==='cp'){openCopy(ymd);return;}
+    if(act.dataset.act==='pan'){const e=entry(id,ymd)||{};const pv=panier(e),au=panAuto(e);const forced=e.p==='oui'||e.p==='non';
+      setEntry(id,ymd,{p:forced?'':(au?'non':'oui')});}
+    if(act.dataset.act==='fill'){const h=emp.ht||{};setEntry(id,ymd,{ms:h.ms,me:h.me,as:h.as,ae:h.ae,d:'',t:''});}
+    if(act.dataset.act==='clr'){const key=monthKey(id,ymd.slice(0,7));const m=S.months.get(key);if(m&&m.jours){delete m.jours[ymd.slice(8)];saveMonth(key);}}
+    if(act.dataset.act==='prev'){let d=addDays(parseYmd(ymd),-1),src=null;for(let i=0;i<14&&!src;i++,d=addDays(d,-1)){const e=entry(id,ymdOf(d));if(e&&(e.ms||e.as||e.d))src=e;}
+      if(src)setEntry(id,ymd,{ms:src.ms||'',me:src.me||'',as:src.as||'',ae:src.ae||'',d:src.d||'',t:src.t==='T'?'T':''});else{toast('Aucun jour précédent avec horaires');return;}}
+    refreshRow(id,ymd);refreshDerived(id);return;}
+  if(t.dataset.close!=null||t.classList.contains('modal')){t.closest('.modal').classList.remove('on');}
+});
+$('yPrev').onclick=()=>{S.year--;render();};
+$('yNext').onclick=()=>{S.year++;render();};
+
+/* ================= employee modal ================= */
+let editId=null,adjTmp=[];
+function openEmp(id){
+  editId=id||null;const e=id?S.emps.get(id):newEmp('');
+  $('mEmpTitle').textContent=id?'Fiche de '+e.nom:'Nouveau salarié';
+  $('fNom').value=e.nom||'';$('fBase').value=e.base??35;$('fJours').value=e.jours??5;$('fHsPay').value=e.hsPay??0;$('fDebut').value=e.debut||'';
+  $('fHsInit').value=e.hsInit??0;$('fCpInit').value=e.cpInit??0;$('fCpMois').value=e.cpMois??2.08;
+  const h=e.ht||{};$('fHms').value=h.ms||'';$('fHme').value=h.me||'';$('fHas').value=h.as||'';$('fHae').value=h.ae||'';
+  $('fArch').checked=!!e.arch;$('empDel').style.display=id?'':'none';
+  adjTmp=JSON.parse(JSON.stringify(e.ajust||[]));renderAdj();
+  $('mEmp').classList.add('on');setTimeout(()=>$('fNom').focus(),50);
+}
+window.openEmp=openEmp;
+function renderAdj(){$('adjList').innerHTML=adjTmp.map((a,i)=>`<div class="adj"><input type="date" data-i="${i}" data-k="date" value="${a.date||''}"><input data-i="${i}" data-k="h" value="${a.h??''}" placeholder="−10"><input data-i="${i}" data-k="note" value="${esc(a.note||'')}" placeholder="Motif"><button class="icon" data-rm="${i}">✕</button></div>`).join('')||'<div class="help">Aucun ajustement.</div>';}
+$('adjList').addEventListener('input',e=>{const i=e.target.dataset.i,k=e.target.dataset.k;if(i==null)return;adjTmp[i][k]=k==='h'?e.target.value:e.target.value;});
+$('adjList').addEventListener('click',e=>{const r=e.target.dataset.rm;if(r!=null){adjTmp.splice(+r,1);renderAdj();}});
+$('adjAdd').onclick=()=>{adjTmp.push({date:TODAY,h:'',note:''});renderAdj();};
+$('empSave').onclick=()=>{
+  const nom=$('fNom').value.trim();if(!nom){toast('Indique un nom');return;}
+  const id=editId||('e'+Date.now().toString(36)+Math.random().toString(36).slice(2,5));
+  const prev=S.emps.get(id)||newEmp(nom);
+  const e={...prev,nom,base:num($('fBase').value,35),jours:Math.max(1,Math.round(num($('fJours').value,5))),hsPay:num($('fHsPay').value),debut:$('fDebut').value||(S.year+'-01-01'),
+    hsInit:num($('fHsInit').value),cpInit:num($('fCpInit').value),cpMois:num($('fCpMois').value,2.08),
+    ht:{ms:$('fHms').value,me:$('fHme').value,as:$('fHas').value,ae:$('fHae').value},
+    ajust:adjTmp.filter(a=>a.h!==''&&!isNaN(num(a.h,NaN))).map(a=>({date:a.date||TODAY,h:num(a.h),note:a.note||''})),arch:$('fArch').checked};
+  S.emps.set(id,e);saveEmp(id);$('mEmp').classList.remove('on');
+  if(!editId)S.view=id;render();toast('Fiche enregistrée');
+};
+let delArm=0;
+$('empDel').onclick=()=>{
+  if(Date.now()-delArm>4000){delArm=Date.now();$('empDel').textContent='Confirmer la suppression ?';setTimeout(()=>$('empDel').textContent='Supprimer',4000);return;}
+  const id=editId;S.emps.delete(id);saveEmp(id);
+  [...S.months.keys()].filter(k=>k.startsWith(id+'_')).forEach(k=>{S.months.get(k).jours={};saveMonth(k);});
+  $('empDel').textContent='Supprimer';$('mEmp').classList.remove('on');S.view='equipe';render();toast('Salarié supprimé');
+};
+
+/* settings */
+$('btnSettings').onclick=()=>{$('sSeuil').value=S.config.seuil50;$('sMaj').value=S.config.majore?'1':'0';$('sArch').checked=!!S.config.showArch;$('sPan').value=S.config.panEur||'';$('mSet').classList.add('on');};
+$('setSave').onclick=()=>{S.config.seuil50=num($('sSeuil').value,43);S.config.majore=$('sMaj').value==='1';S.config.showArch=$('sArch').checked;S.config.panEur=$('sPan').value;saveConfig();$('mSet').classList.remove('on');render();};
+
+function copyEmpRecap(id){
+  const e=S.emps.get(id),r=computeEmp(id);
+  const L=[`${e.nom} – récap ${S.year} (au ${parseYmd(TODAY).toLocaleDateString('fr-FR')})`,
+    `Heures travaillées : ${fmt(r.yr.worked)} (${decH(r.yr.worked)} h)`,
+    `Heures sup acquises : ${fmt(r.yr.hsAcq)}`+(r.yr.paid?` (+ ${fmt(r.yr.paid)} payées d'office)`:''),
+    `Heures récupérées : ${fmt(r.yr.hsRec)}`,
+    `Solde d'heures sup à récupérer : ${fmt(r.solde,true)}`,
+    `Congés pris en ${S.year} : ${nb(r.cnt.CP)} j · solde de congés : ${nb(r.cpSolde)} j`,
+    `Maladie : ${r.cnt.MAL} j · intempéries : ${r.cnt.INT} j · absences non payées : ${r.cnt.ABS} j`,
+    `Paniers repas : ${r.panTot}${panE(r.panTot)?' ('+panE(r.panTot)+')':''} – `+r.pan.map((n,i)=>n?`${MCOURT[i]} ${n}`:null).filter(Boolean).join(' · ')];
+  copyText(L.join('\n'));
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal.on').forEach(m=>m.classList.remove('on'));});
+
+/* ================= copy between employees ================= */
+let cpCtx=null;
+function openCopy(dayYmd){
+  const src=S.view,emp=S.emps.get(src);
+  const others=empList().filter(e=>e.id!==src&&!e.arch);
+  if(!others.length){toast("Ajoute d'abord un autre salarié");return;}
+  const Y=S.year,m=S.month,nd=new Date(Y,m+1,0).getDate();
+  const ref=dayYmd?parseYmd(dayYmd):((parseYmd(TODAY).getFullYear()===Y&&parseYmd(TODAY).getMonth()===m)?parseYmd(TODAY):new Date(Y,m,1,12));
+  const mon=mondayOf(ref);
+  const presets=[];
+  if(dayYmd)presets.push(['day',`Ce jour (${ref.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})})`,dayYmd,dayYmd]);
+  presets.push(['week',`Semaine du ${mon.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}`,ymdOf(mon),ymdOf(addDays(mon,6))]);
+  presets.push(['month',`Tout ${MOIS[m].toLowerCase()} ${Y}`,ymdOf(new Date(Y,m,1,12)),ymdOf(new Date(Y,m,nd,12))]);
+  presets.push(['custom','Période personnalisée…','','']);
+  cpCtx={src,presets};
+  $('cpTitle').textContent=`Copier les heures de ${emp.nom}`;
+  $('cpTargets').innerHTML=others.map((e,i)=>`<label class="chip mute" style="font-size:13px;padding:6px 10px;cursor:pointer;display:inline-flex;gap:6px;align-items:center"><input type="checkbox" value="${e.id}" ${others.length===1?'checked':''}> ${esc(e.nom)}</label>`).join('');
+  $('cpPreset').innerHTML=presets.map(p=>`<option value="${p[0]}">${p[1]}</option>`).join('');
+  $('cpPreset').value=presets[0][0];applyPreset();
+  $('cpOver').checked=false;$('cpPerso').checked=false;
+  $('mCopy').classList.add('on');cpPreview();
+}
+function applyPreset(){const p=cpCtx.presets.find(x=>x[0]===$('cpPreset').value);if(p&&p[0]!=='custom'){$('cpFrom').value=p[2];$('cpTo').value=p[3];}}
+function cpPlan(){
+  const targets=[...$('cpTargets').querySelectorAll('input:checked')].map(i=>i.value);
+  const from=$('cpFrom').value,to=$('cpTo').value;if(!from||!to||to<from)return {targets,days:[],skip:0,ok:false};
+  const over=$('cpOver').checked,perso=$('cpPerso').checked;const days=[];let skip=0;
+  for(let d=parseYmd(from);ymdOf(d)<=to;d=addDays(d,1)){const ymd=ymdOf(d);const e=entry(cpCtx.src,ymd);if(!e)continue;
+    if(!perso&&PERSO.includes(e.t))continue;
+    targets.forEach(t=>{if(!over&&entry(t,ymd)){skip++;return;}days.push([t,ymd,e]);});}
+  return {targets,days,skip,ok:true};
+}
+function cpPreview(){const p=cpPlan();
+  $('cpPreview').textContent=!p.targets.length?'Coche au moins un salarié.':!p.ok?'Vérifie les dates.':
+    `${p.days.length} journée(s) seront copiées`+(p.skip?` · ${p.skip} ignorée(s) car déjà remplies (coche « Remplacer » pour les écraser)`:'')+'.';
+  $('cpGo').disabled=!p.days.length;}
+$('cpPreset').onchange=()=>{applyPreset();cpPreview();};
+['cpFrom','cpTo'].forEach(id=>$(id).addEventListener('input',()=>{$('cpPreset').value='custom';cpPreview();}));
+['cpOver','cpPerso'].forEach(id=>$(id).onchange=cpPreview);
+$('cpTargets').addEventListener('change',cpPreview);
+$('cpGo').onclick=()=>{const p=cpPlan();if(!p.days.length)return;
+  p.days.forEach(([t,ymd,e])=>{const key=monthKey(t,ymd.slice(0,7));let m=S.months.get(key);
+    if(!m){m={emp:t,annee:+ymd.slice(0,4),mois:ymd.slice(0,7),jours:{}};S.months.set(key,m);}m.jours=m.jours||{};
+    m.jours[ymd.slice(8)]=JSON.parse(JSON.stringify(e));});
+  new Set(p.days.map(([t,ymd])=>monthKey(t,ymd.slice(0,7)))).forEach(saveMonth);
+  const names=p.targets.map(t=>S.emps.get(t).nom).join(', ');
+  $('mCopy').classList.remove('on');toast(`${p.days.length} journée(s) copiée(s) vers ${names}`);render();
+};
+
+function flushAll(){[...timers.entries()].forEach(([path,t])=>{clearTimeout(t);timers.delete(path);
+  if(!db){saveLocal();return;}
+  if(path.startsWith('pointages/'))flush(path,()=>{const m=S.months.get(path.slice(10));return m&&Object.keys(m.jours||{}).length?m:null;});
+  else if(path.startsWith('employes/')){const id=path.slice(9);flush(path,()=>S.emps.has(id)?S.emps.get(id):null);}
+  else flush(path,()=>({seuil50:S.config.seuil50,majore:S.config.majore,showArch:S.config.showArch,panEur:S.config.panEur||''}));});
+  if(!db)saveLocal();}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushAll();});
+window.addEventListener('pagehide',flushAll);
+
+/* init */
+render();
+initBackend();
+</script>
+</body>
+</html>
