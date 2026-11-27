@@ -303,6 +303,80 @@ window.__prepStairs=prepStairs;
   startRender=function(){ try{ prepStairs(buildCam()); }catch(e){ console.warn('[escaliers]', e); } return start0(); };
 }
 
+
+/* ---------- export : nom du fichier et dossier ----------
+   Sur ordinateur (Chrome, Edge), la fenêtre « Enregistrer sous » du système
+   permet de choisir le nom ET le dossier ; elle se souvient du dernier dossier
+   utilisé. Sur iPad et iPhone (Safari ne sait pas ouvrir cette fenêtre), on
+   demande le nom puis on ouvre le menu de partage : « Enregistrer dans
+   Fichiers » laisse choisir le dossier. Sinon, téléchargement classique. */
+try {
+  const nomParDefaut = () => {
+    const id=$('model').value, m=MODELS.find(x=>x.id===id);
+    const quoi = m ? m.n.replace(/\s+—.*$/,'') : `${$('dL').value} x ${$('dW').value} m`;
+    const d=new Date(), j=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return `Implantation ${quoi} ${j}`.replace(/[\\/:*?"<>|]/g,'-');
+  };
+  const image = type => new Promise(res=>{
+    const m=showMarks; showMarks=false; draw();
+    cv.toBlob(b=>{ showMarks=m; draw(); res(b); }, type, 0.92);
+  });
+  // petite fenêtre pour le nom, quand le système n'en propose pas
+  const demanderNom = def => new Promise(res=>{
+    const f=document.createElement('div');
+    f.style.cssText='position:fixed;inset:0;background:#000a;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    f.innerHTML=`<form style="background:#161f26;border:1px solid #25333d;border-radius:12px;padding:18px;width:min(420px,100%);color:#e6eef3;font:14px system-ui">
+      <div style="font-weight:600;margin-bottom:10px">Enregistrer l'image</div>
+      <label style="display:block;color:#8fa3b0;font-size:12px;margin-bottom:4px">Nom du fichier</label>
+      <input name="n" style="width:100%;padding:10px;border-radius:7px;border:1px solid #25333d;background:#1e2b34;color:#e6eef3;font:inherit">
+      <label style="display:block;color:#8fa3b0;font-size:12px;margin:10px 0 4px">Format</label>
+      <select name="t" style="width:100%;padding:10px;border-radius:7px;border:1px solid #25333d;background:#1e2b34;color:#e6eef3;font:inherit">
+        <option value="image/jpeg">JPEG (plus léger, pour l'envoyer au client)</option><option value="image/png">PNG (qualité maximale)</option></select>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button type="button" data-x style="padding:9px 14px;border-radius:7px;border:1px solid #25333d;background:#1e2b34;color:#e6eef3">Annuler</button>
+        <button style="padding:9px 14px;border-radius:7px;border:0;background:#33c3ff;color:#04212e;font-weight:600">Continuer</button></div>
+      <div style="color:#8fa3b0;font-size:11.5px;margin-top:10px">Ensuite, choisis « Enregistrer dans Fichiers » pour indiquer le dossier.</div></form>`;
+    document.body.appendChild(f);
+    const fo=f.querySelector('form'), n=fo.n; n.value=def; setTimeout(()=>{n.focus(); n.select();},50);
+    const fin=v=>{ f.remove(); res(v); };
+    f.querySelector('[data-x]').onclick=()=>fin(null);
+    fo.onsubmit=e=>{ e.preventDefault(); const v=n.value.trim().replace(/\.(png|jpe?g)$/i,''); fin(v?{nom:v,type:fo.t.value}:null); };
+  });
+  const telecharger = file => {
+    const a=document.createElement('a'); a.download=file.name; a.href=URL.createObjectURL(file);
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  };
+  const btn=$('save');
+  btn.textContent='Enregistrer…';
+  btn.onclick = async () => {
+    if(!photo){ hint('Charge d\'abord une photo.'); return; }
+    const def=nomParDefaut();
+    if(window.showSaveFilePicker){
+      try{
+        const h=await window.showSaveFilePicker({ id:'poolcast-export', suggestedName:def+'.jpg', types:[
+          {description:'Image JPEG', accept:{'image/jpeg':['.jpg','.jpeg']}},
+          {description:'Image PNG',  accept:{'image/png':['.png']}} ]});
+        const type=/\.png$/i.test(h.name)?'image/png':'image/jpeg';
+        const w=await h.createWritable(); await w.write(await image(type)); await w.close();
+        hint(`Image enregistrée : ${h.name}`);
+        return;
+      }catch(e){
+        if(e && e.name==='AbortError') return;          // fenêtre fermée : on ne fait rien
+        console.warn('[export]', e);                    // refusé (iframe, droits) : solution de repli
+      }
+    }
+    const choix=await demanderNom(def); if(!choix) return;
+    const ext=choix.type==='image/png'?'png':'jpg';
+    const file=new File([await image(choix.type)], `${choix.nom}.${ext}`, {type:choix.type});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:choix.nom}); return; }
+      catch(e){ if(e && e.name==='AbortError') return; }
+    }
+    telecharger(file);
+    hint(`Image téléchargée : ${file.name}`);
+  };
+} catch(e) { console.warn('[export]', e); }
+
 const glc = document.createElement('canvas');
 const gl = glc.getContext('webgl2', {alpha:true, premultipliedAlpha:true, antialias:false,
                                      preserveDrawingBuffer:true, powerPreference:'high-performance'});
@@ -1063,6 +1137,6 @@ startRender=function(){
   }
   catch(e){ console.error('[rendu GPU]', e); lost=true; cpuStart(); }
 };
-window.__renduGPU={actif:true, version:'1.2', qualite:()=>({qual, lastFull:Math.round(lastFull)})};
+window.__renduGPU={actif:true, version:'1.3', qualite:()=>({qual, lastFull:Math.round(lastFull)})};
 if(photo&&pts) render();
 })();

@@ -133,7 +133,7 @@ function iconesBatiAzur(reponse) {
 /** Ajoute le moteur de rendu GPU a la page de l'Implantation. Le numero de
  *  version est dans l'adresse : le service worker de l'outil garde ses
  *  fichiers en cache sans limite, une nouvelle version doit donc changer d'URL. */
-const RENDU_IMPLANTATION = "1.2";
+const RENDU_IMPLANTATION = "1.3";
 function renduImplantation(reponse) {
   if (!(reponse.headers.get("content-type") || "").includes("text/html")) return reponse;
   return new HTMLRewriter()
